@@ -56,10 +56,14 @@ const store = new Store({
   }
 });
 
-// The updates repository used to be 'djgragra/g-downloader-releases' (now merged into the main
-// repo). Saved settings keep the old value, since defaults only fill missing keys.
-if (store.get('settings.updateRepo') === 'djgragra/g-downloader-releases') {
-  store.set('settings.updateRepo', 'djgragra/g-downloader');
+// Saved settings keep whatever updates repository an older version stored (defaults only fill
+// missing keys): the retired 'djgragra/g-downloader-releases', an empty or a malformed value.
+// The field is not editable in the UI, so anything that is not a valid 'owner/repo' is reset.
+{
+  const repo = store.get('settings.updateRepo');
+  if (repo === 'djgragra/g-downloader-releases' || !/^[\w.-]+\/[\w.-]+$/.test(repo || '')) {
+    store.set('settings.updateRepo', 'djgragra/g-downloader');
+  }
 }
 
 // ---- secrets at rest -------------------------------------------------------------
