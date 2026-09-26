@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' file:; media-src 'self' file:" />
+<title>G-Downloader</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <img src="../assets/logo-white.png" alt="G-Downloader" class="brand-logo-full" id="brand-logo-img" />
+        </div>
+      </div>
+      <button id="btn-dashboard" class="nav-item-dashboard active">
+        <span class="nav-item-dashboard-icon">📊</span>
+        <span id="btn-dashboard-label">Dashboard</span>
+      </button>
+      <button id="btn-tasks" class="nav-item-dashboard nav-item-tasks">
+        <span class="nav-item-dashboard-icon">📅</span>
+        <span id="btn-tasks-label">Palinsesto</span>
+      </button>
+      <div class="queue-panel">
+        <h4 id="queue-panel-title">Prossimi download in coda</h4>
+        <div id="queue-list" class="queue-list"></div>
+      </div>
+      <div class="task-list-actions">
+        <button id="btn-new-task" class="btn btn-primary btn-sm" title="Nuovo task">+ Task</button>
+        <button id="btn-import-task" class="btn btn-ghost btn-sm" title="Importa task da file">⤒</button>
+      </div>
+      <div class="task-list-header" id="task-list-header">Task</div>
+      <div id="task-list" class="task-list"></div>
+      <div class="sidebar-footer">
+        <button id="btn-settings" class="btn btn-ghost btn-block">⚙ Impostazioni</button>
+        <button id="btn-about" class="btn btn-ghost btn-block">ℹ️ Info e Guida</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="clock-widget">
+          <div id="clock-time" class="clock-time">--:--:--</div>
+          <div id="clock-date" class="clock-date">—</div>
+        </div>
+        <div id="next-widget" class="next-widget">
+          <div class="next-widget-label" id="next-widget-label">Prossimo download</div>
+          <div id="next-widget-name" class="next-widget-name">Nessuna pianificazione attiva</div>
+          <div id="next-widget-countdown" class="next-widget-countdown">—</div>
+        </div>
+        <div id="active-widget" class="active-widget" style="display:none">
+          <div class="next-widget-label" id="active-widget-label">Download in corso</div>
+          <div id="active-widget-body"></div>
+        </div>
+      </div>
+
+      <div id="editor-root" class="editor-root">
+        <div class="empty-state">
+          <h2>Nessun task selezionato</h2>
+          <p>Crea un nuovo task di download o selezionane uno dalla lista a sinistra.</p>
+        </div>
+      </div>
+
+      <section class="console collapsed" id="console">
+        <div class="console-resize-handle" id="console-resize-handle" title="Trascina per ridimensionare"></div>
+        <div class="console-header">
+          <span id="console-title">Console</span>
+          <button id="btn-clear-console" class="btn btn-ghost btn-xs">Pulisci</button>
+          <button id="btn-toggle-console" class="btn btn-ghost btn-xs">▸</button>
+        </div>
+        <div id="console-body" class="console-body"></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="tpl-schedule-row">
+    <div class="row schedule-row" data-role="schedule-row"></div>
+  </template>
+
+  <div id="cron-help-overlay" class="modal-overlay">
+    <div class="modal-box" id="cron-help-box"></div>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="i18n-text.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
