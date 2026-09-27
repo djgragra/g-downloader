@@ -98,26 +98,130 @@ function cleanPathForDisplay(p) {
   return s.trim();
 }
 
-function showUpdateBanner(info) {
+// ---------- updates ----------
+// One state, shown both in the bar at the top and in Settings -> Updates:
+// 'available' -> 'downloading' -> 'ready' (installer downloaded and verified), or 'error'.
+const upd = { state: null, info: null, text: '', pct: 0, hidden: false };
+
+function updateErrorText(code) {
+  const known = {
+    'checksum-mismatch': L('il file scaricato non corrisponde al checksum della release ed è stato eliminato'),
+    'no-installer': L('nella release non c\'è un installer per questo sistema'),
+    'no-checksums': L('nella release manca il checksum SHA-256 dell\'installer'),
+    'no-update': L('nessun aggiornamento disponibile'),
+    busy: L('un download è in corso: riprova quando è finito')
+  };
+  return known[code] || code;
+}
+
+function setUpdateState(stateName, text, info) {
+  upd.state = stateName;
+  upd.text = text;
+  if (info) upd.info = info;
+  if (stateName !== 'downloading') upd.pct = 0;
+  upd.hidden = false;
+  paintUpdate();
+}
+
+function installLabel() {
+  return window.api.platform === 'win32' ? L('Chiudi e installa') : L('Apri installer');
+}
+
+// Draws the shared state into the bar and, when Settings is open, into its Updates card.
+function paintUpdate() {
+  const s = upd.state;
   let bar = document.getElementById('update-banner');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'update-banner';
-    bar.className = 'update-banner';
-    document.querySelector('.main').prepend(bar);
+  if (!s || upd.hidden) {
+    bar?.remove();
+  } else {
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'update-banner';
+      bar.className = 'update-banner';
+      document.querySelector('.main').prepend(bar);
+    }
+    bar.classList.toggle('ready', s === 'ready');
+    bar.classList.toggle('error', s === 'error');
+    bar.innerHTML = `
+      <span class="update-banner-text">${escapeHtml(upd.text)}</span>
+      ${s === 'downloading' ? `<span class="upd-progress"><i style="width:${upd.pct}%"></i></span>` : ''}
+      ${s === 'available' ? `<button class="btn btn-sm" data-upd="download">${escapeHtml(L('Scarica e installa'))}</button>` : ''}
+      ${s === 'ready' ? `<button class="btn btn-sm btn-install" data-upd="install">${escapeHtml(installLabel())}</button>` : ''}
+      ${s === 'error' ? `<button class="btn btn-sm" data-upd="page">${escapeHtml(L('Apri pagina di download'))}</button>` : ''}
+      ${s !== 'downloading' ? `<button class="btn btn-sm" data-upd="hide" title="${escapeHtml(L('Nascondi'))}">×</button>` : ''}`;
   }
-  bar.innerHTML = '';
-  const txt = document.createElement('span');
-  txt.textContent = L('Nuova versione {latest} disponibile (installata: {current}).', { latest: info.latest, current: info.current });
-  const go = document.createElement('button');
-  go.className = 'btn small';
-  go.textContent = L('Scarica');
-  go.onclick = () => window.api.updates.open(info.url);
-  const close = document.createElement('button');
-  close.className = 'btn small';
-  close.textContent = '×';
-  close.onclick = () => bar.remove();
-  bar.append(txt, go, close);
+
+  const out = document.getElementById('update-result');
+  if (!out) return;
+  const color = { error: 'var(--err)', ready: 'var(--ok)', available: 'var(--warn)' }[s];
+  if (s) {
+    out.textContent = upd.text;
+    out.style.color = color || '';
+  }
+  const show = (id, on) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? '' : 'none';
+  };
+  show('btn-update-download', s === 'available');
+  show('btn-update-install', s === 'ready');
+  show('btn-update-page', s === 'error');
+  show('update-progress-settings', s === 'downloading');
+  const fill = document.querySelector('#update-progress-settings i');
+  if (fill) fill.style.width = `${upd.pct}%`;
+  const install = document.getElementById('btn-update-install');
+  if (install) install.textContent = installLabel();
+  const check = document.getElementById('btn-check-updates');
+  if (check) check.disabled = s === 'downloading';
+}
+
+function showUpdateBanner(info) {
+  if (!info?.available) return;
+  // never go back to "available" while downloading, or once this version is ready to install
+  if (upd.state === 'downloading' || (upd.state === 'ready' && upd.info?.latest === info.latest)) return;
+  setUpdateState('available', L('Nuova versione {latest} disponibile (installata: {current}).', { latest: info.latest, current: info.current }), info);
+}
+
+async function startUpdateDownload() {
+  if (upd.state === 'downloading') return;
+  const v = upd.info?.latest || '';
+  setUpdateState('downloading', L('Download della versione {v}…', { v }));
+  const res = await window.api.updates.download();
+  if (res.ok) {
+    const text =
+      window.api.platform === 'win32'
+        ? L('Versione {v} scaricata e verificata. "Chiudi e installa" chiude G-Downloader (i download pianificati si fermano) e avvia l\'installazione; al termine l\'app si riapre.', { v })
+        : window.api.platform === 'darwin'
+          ? L('Versione {v} scaricata e verificata. "Apri installer" apre il file .dmg: chiudi G-Downloader con "Esci" dall\'icona nella barra dei menu e trascina la nuova versione in Applicazioni.', { v })
+          : L('Versione {v} scaricata e verificata. "Apri installer" mostra il file AppImage nella cartella: chiudi G-Downloader con "Esci" e avvia il nuovo file.', { v });
+    setUpdateState('ready', text);
+  } else {
+    setUpdateState('error', L('Download dell\'aggiornamento non riuscito: {error}', { error: updateErrorText(res.error) }));
+  }
+}
+
+async function installUpdate() {
+  const res = await window.api.updates.install();
+  if (!res.ok) setUpdateState('error', L('Installazione non avviata: {error}', { error: updateErrorText(res.error) }));
+}
+
+function handleUpdateAction(action) {
+  if (action === 'download') startUpdateDownload();
+  else if (action === 'install') installUpdate();
+  else if (action === 'page') window.api.updates.open(upd.info?.url);
+  else if (action === 'hide') {
+    upd.hidden = true;
+    paintUpdate();
+  }
+}
+
+function onUpdateProgress({ received, total }) {
+  if (upd.state !== 'downloading') return;
+  const mb = (n) => (n / 1048576).toFixed(0);
+  upd.pct = total ? Math.round((received * 100) / total) : 0;
+  upd.text =
+    L('Download della versione {v}…', { v: upd.info?.latest || '' }) +
+    (total ? ` ${upd.pct}% (${mb(received)}/${mb(total)} MB)` : ` ${mb(received)} MB`);
+  paintUpdate();
 }
 
 function escapeHtml(s) {
@@ -1398,12 +1502,15 @@ function renderSettings() {
     <div class="card">
       <h3>${L("Aggiornamenti")}</h3>
       <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.checkUpdates !== false ? 'on' : ''}" data-setting-toggle="checkUpdates"></span> ${L("Controlla automaticamente se esiste una nuova versione (solo avviso, nessuna installazione automatica)")}</label>
+        <label class="toggle"><span class="switch ${s.checkUpdates !== false ? 'on' : ''}" data-setting-toggle="checkUpdates"></span> ${L("Controlla automaticamente se esiste una nuova versione (avviso e download su richiesta, nessuna installazione automatica)")}</label>
       </div>
       <div class="btn-row">
         <button class="btn" id="btn-check-updates">${L("Controlla aggiornamenti")}</button>
-        <button class="btn" id="btn-open-update" style="display:none">${L("Apri pagina di download")}</button>
+        <button class="btn" id="btn-update-download" data-upd="download" style="display:none">${L("Scarica e installa")}</button>
+        <button class="btn btn-install" id="btn-update-install" data-upd="install" style="display:none"></button>
+        <button class="btn" id="btn-update-page" data-upd="page" style="display:none">${L("Apri pagina di download")}</button>
       </div>
+      <span id="update-progress-settings" class="upd-progress upd-progress-settings" style="display:none"><i></i></span>
       <span id="update-result" class="hint"></span>
     </div>
 
@@ -1581,18 +1688,21 @@ function renderSettings() {
     state.settings = await window.api.settings.update({ staleAlertRuns: Math.max(0, Number(e.target.value) || 0) });
   });
   document.getElementById('btn-check-updates').addEventListener('click', async () => {
+    if (upd.state === 'downloading') return;
     const out = document.getElementById('update-result');
-    const openBtn = document.getElementById('btn-open-update');
+    out.style.color = '';
     out.textContent = L('Controllo in corso…');
     const info = await window.api.updates.check();
-    if (!info.ok) out.textContent = L('Controllo non riuscito: ') + info.error;
-    else if (info.available) {
-      out.textContent = L('Disponibile la versione {latest} (installata: {current}).', { latest: info.latest, current: info.current });
-      openBtn.style.display = '';
-      openBtn.onclick = () => window.api.updates.open(info.url);
+    if (!info.ok) {
+      // a failed check leaves a downloaded installer usable
+      if (upd.state === 'ready') paintUpdate();
+      else out.textContent = L('Controllo non riuscito: ') + info.error;
+    } else if (info.available) {
       showUpdateBanner(info);
+      paintUpdate();
     } else out.textContent = L('Sei aggiornato (versione {current}).', { current: info.current }) + (info.note ? ' ' + info.note + '.' : '');
   });
+  paintUpdate();
   const minFileSizeInput = document.getElementById('setting-min-file-size');
   if (minFileSizeInput) {
     minFileSizeInput.addEventListener('change', async (e) => {
@@ -2525,6 +2635,12 @@ function initGlobalUI() {
     renderActiveWidget();
   });
   window.api.on.updateAvailable((info) => showUpdateBanner(info));
+  window.api.on.updateProgress(onUpdateProgress);
+  // buttons in the bar and in Settings share the same actions
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-upd]');
+    if (btn) handleUpdateAction(btn.dataset.upd);
+  });
   window.api.on.taskFinished(({ taskId }) => {
     delete state.activeDownloads[taskId];
     renderActiveWidget();

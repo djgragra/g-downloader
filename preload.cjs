@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  platform: process.platform,
   tasks: {
     list: () => ipcRenderer.invoke('tasks:list'),
     get: (id) => ipcRenderer.invoke('tasks:get', id),
@@ -38,6 +39,8 @@ contextBridge.exposeInMainWorld('api', {
   },
   updates: {
     check: () => ipcRenderer.invoke('update:check'),
+    download: () => ipcRenderer.invoke('update:download'),
+    install: () => ipcRenderer.invoke('update:install'),
     open: (url) => ipcRenderer.invoke('update:open', url)
   },
   files: {
@@ -55,6 +58,7 @@ contextBridge.exposeInMainWorld('api', {
     progress: (cb) => ipcRenderer.on('event:progress', (_e, data) => cb(data)),
     taskStarted: (cb) => ipcRenderer.on('event:task-started', (_e, data) => cb(data)),
     updateAvailable: (cb) => ipcRenderer.on('event:update-available', (_e, data) => cb(data)),
+    updateProgress: (cb) => ipcRenderer.on('event:update-progress', (_e, data) => cb(data)),
     taskFinished: (cb) => ipcRenderer.on('event:task-finished', (_e, data) => cb(data))
   }
 });

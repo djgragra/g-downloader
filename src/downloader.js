@@ -365,6 +365,10 @@ export function isTaskRunning(taskId) {
   return activeRuns.has(taskId);
 }
 
+export function runningTaskCount() {
+  return activeRuns.size;
+}
+
 // Same task never runs twice at once (e.g. a seconds-interval task slower than its interval).
 export async function runTask(taskId, opts = {}) {
   if (activeRuns.has(taskId)) throw new Error(M("Task già in esecuzione"));

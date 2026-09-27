@@ -1359,6 +1359,70 @@ const UI_TEXT = {
  "{n}g": [
   "{n}d",
   "{n}d"
+ ],
+ "Controlla automaticamente se esiste una nuova versione (avviso e download su richiesta, nessuna installazione automatica)": [
+  "Automatically check for a new version (notice and download on request, nothing installs by itself)",
+  "Comprobar automáticamente si hay una versión nueva (aviso y descarga bajo petición, sin instalación automática)"
+ ],
+ "il file scaricato non corrisponde al checksum della release ed è stato eliminato": [
+  "the downloaded file does not match the release checksum and was deleted",
+  "el archivo descargado no coincide con la suma de verificación de la versión y se ha eliminado"
+ ],
+ "nella release non c'è un installer per questo sistema": [
+  "the release has no installer for this system",
+  "la versión no incluye un instalador para este sistema"
+ ],
+ "nella release manca il checksum SHA-256 dell'installer": [
+  "the release is missing the installer's SHA-256 checksum",
+  "a la versión le falta la suma SHA-256 del instalador"
+ ],
+ "nessun aggiornamento disponibile": [
+  "no update available",
+  "no hay ninguna actualización disponible"
+ ],
+ "un download è in corso: riprova quando è finito": [
+  "a download is running: try again when it has finished",
+  "hay una descarga en curso: vuelve a intentarlo cuando termine"
+ ],
+ "Chiudi e installa": [
+  "Close and install",
+  "Cerrar e instalar"
+ ],
+ "Apri installer": [
+  "Open installer",
+  "Abrir instalador"
+ ],
+ "Scarica e installa": [
+  "Download and install",
+  "Descargar e instalar"
+ ],
+ "Nascondi": [
+  "Hide",
+  "Ocultar"
+ ],
+ "Download della versione {v}…": [
+  "Downloading version {v}…",
+  "Descargando la versión {v}…"
+ ],
+ "Versione {v} scaricata e verificata. \"Chiudi e installa\" chiude G-Downloader (i download pianificati si fermano) e avvia l'installazione; al termine l'app si riapre.": [
+  "Version {v} downloaded and verified. \"Close and install\" closes G-Downloader (scheduled downloads stop) and starts the installation; the app reopens when it is done.",
+  "Versión {v} descargada y verificada. \"Cerrar e instalar\" cierra G-Downloader (las descargas programadas se detienen) e inicia la instalación; al terminar la app se vuelve a abrir."
+ ],
+ "Versione {v} scaricata e verificata. \"Apri installer\" apre il file .dmg: chiudi G-Downloader con \"Esci\" dall'icona nella barra dei menu e trascina la nuova versione in Applicazioni.": [
+  "Version {v} downloaded and verified. \"Open installer\" opens the .dmg file: quit G-Downloader with \"Quit\" from the menu-bar icon and drag the new version into Applications.",
+  "Versión {v} descargada y verificada. \"Abrir instalador\" abre el archivo .dmg: cierra G-Downloader con \"Salir\" desde el icono de la barra de menús y arrastra la nueva versión a Aplicaciones."
+ ],
+ "Versione {v} scaricata e verificata. \"Apri installer\" mostra il file AppImage nella cartella: chiudi G-Downloader con \"Esci\" e avvia il nuovo file.": [
+  "Version {v} downloaded and verified. \"Open installer\" shows the AppImage file in its folder: quit G-Downloader with \"Quit\" and start the new file.",
+  "Versión {v} descargada y verificada. \"Abrir instalador\" muestra el archivo AppImage en su carpeta: cierra G-Downloader con \"Salir\" e inicia el archivo nuevo."
+ ],
+ "Download dell'aggiornamento non riuscito: {error}": [
+  "Update download failed: {error}",
+  "Falló la descarga de la actualización: {error}"
+ ],
+ "Installazione non avviata: {error}": [
+  "Installation not started: {error}",
+  "Instalación no iniciada: {error}"
  ]
 };
 

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Tray, Menu, ipcMain, dialog, nativeImage, nativeTheme, Notification, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   getTasks,
@@ -20,9 +21,9 @@ import {
   migrateSecrets
 } from './src/store.js';
 import { startScheduler, lastScheduledOccurrence, recentOccurrences, nextRunForTask, computeQueue, findMissedOccurrences, upcomingOccurrencesForSchedule } from './src/scheduler.js';
-import { runTaskNow, events as downloadEvents } from './src/downloader.js';
+import { runTaskNow, runningTaskCount, events as downloadEvents } from './src/downloader.js';
 import { testEmail, testTelegram } from './src/notifications.js';
-import { checkForUpdate } from './src/updater.js';
+import { checkForUpdate, downloadInstaller } from './src/updater.js';
 import { appendFileLog, pruneOldLogs, getLogDir } from './src/filelog.js';
 import { M } from './src/i18n.js';
 
@@ -387,7 +388,9 @@ ipcMain.handle('settings:update', (_e, patch) => {
   return next;
 });
 
-// ---- update notice ----
+// ---- updates ----
+// The check shows a notice; on request the installer is downloaded to the Downloads folder and
+// verified (SHA-256). It only runs when the user presses "Close and install" / "Open installer".
 let lastUpdateInfo = null;
 async function runUpdateCheck(manual) {
   const info = await checkForUpdate(getSettings().updateRepo);
@@ -402,8 +405,56 @@ function scheduleUpdateChecks() {
   setInterval(() => getSettings().checkUpdates && runUpdateCheck(false), 24 * 3600 * 1000);
 }
 ipcMain.handle('update:check', () => runUpdateCheck(true));
+
+let downloadedInstaller = null; // { version, file } once downloaded and verified
+let installerDownload = null; // promise of the download in progress, shared by concurrent requests
+ipcMain.handle('update:download', async () => {
+  const info = lastUpdateInfo;
+  if (!info?.available) return { ok: false, error: 'no-update' };
+  if (downloadedInstaller?.version === info.latest && fs.existsSync(downloadedInstaller.file)) {
+    return { ok: true, file: downloadedInstaller.file, version: info.latest };
+  }
+  installerDownload ||= downloadInstaller(info, app.getPath('downloads'), (received, total) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('event:update-progress', { received, total });
+  })
+    .then((file) => {
+      downloadedInstaller = { version: info.latest, file };
+      appendFileLog({ taskId: 'SISTEMA', message: M('Aggiornamento {v} scaricato e verificato: {file}', { v: info.latest, file }) });
+      return { ok: true, file, version: info.latest };
+    })
+    .catch((err) => {
+      appendFileLog({ taskId: 'SISTEMA', level: 'error', message: M('Download dell\'aggiornamento non riuscito: {error}', { error: err.message }) });
+      return { ok: false, error: err.message };
+    })
+    .finally(() => {
+      installerDownload = null;
+    });
+  return installerDownload;
+});
+
+// Windows: start the installer and quit, so it can replace the app (it restarts it when done).
+// macOS / Linux: open the disk image / show the AppImage; the user completes the installation.
+ipcMain.handle('update:install', () => {
+  const d = downloadedInstaller;
+  if (!d || !fs.existsSync(d.file)) return { ok: false, error: 'no-installer' };
+  if (process.platform === 'win32') {
+    if (runningTaskCount() > 0) return { ok: false, error: 'busy' };
+    spawn(d.file, [], { detached: true, stdio: 'ignore' }).unref();
+    isQuitting = true;
+    setTimeout(() => app.quit(), 500);
+  } else if (process.platform === 'darwin') {
+    shell.openPath(d.file);
+  } else {
+    shell.showItemInFolder(d.file);
+  }
+  return { ok: true };
+});
+
+// Only this repository's release pages, or the author's site.
 ipcMain.handle('update:open', (_e, url) => {
-  if (typeof url === 'string' && (/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/releases/.test(url) || url === 'https://onairgarage.com')) return shell.openExternal(url);
+  const releases = `https://github.com/${getSettings().updateRepo}/releases/`;
+  if (url === 'https://onairgarage.com') return shell.openExternal(url);
+  return shell.openExternal(typeof url === 'string' && url.startsWith(releases) ? url : `${releases}latest`);
 });
 
 // ---- IPC: app info ----

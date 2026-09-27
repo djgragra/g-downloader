@@ -416,6 +416,18 @@ const TEXT = {
  "giorni": [
   "days",
   "días"
+ ],
+ "Nessuna release pubblicata": [
+  "No release published",
+  "Ninguna versión publicada"
+ ],
+ "Aggiornamento {v} scaricato e verificato: {file}": [
+  "Update {v} downloaded and verified: {file}",
+  "Actualización {v} descargada y verificada: {file}"
+ ],
+ "Download dell'aggiornamento non riuscito: {error}": [
+  "Update download failed: {error}",
+  "Falló la descarga de la actualización: {error}"
  ]
 };
 

@@ -219,6 +219,10 @@ const GUIDE_CONTENT = {
       {
         h: 'Primo avvio (app non firmata)',
         p: 'L\'app è gratuita e non è firmata digitalmente. <b>macOS:</b> se compare "app danneggiata" o non si apre, clic destro → Apri, oppure nel Terminale: <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>. <b>Windows:</b> se compare SmartScreen, clicca "Ulteriori informazioni" → "Esegui comunque".'
+      },
+      {
+        h: 'Aggiornamenti',
+        p: 'Quando esce una nuova versione compare un avviso in alto (e in Impostazioni → Aggiornamenti). <b>Scarica e installa</b> scarica nella cartella Download l\'installer giusto per il tuo sistema e ne verifica lo SHA-256. Poi: su <b>Windows</b> "Chiudi e installa" chiude l\'app (i download pianificati si fermano), avvia l\'installazione e al termine la riapre; su <b>macOS</b> e <b>Linux</b> "Apri installer" apre il file, e tu chiudi l\'app con "Esci" e installi la nuova versione. Nulla viene installato senza che tu lo chieda.'
       }
     ]
   },
@@ -261,6 +265,10 @@ const GUIDE_CONTENT = {
       {
         h: 'First launch (unsigned app)',
         p: 'The app is free and not code-signed. <b>macOS:</b> if it says the app is damaged or cannot be opened, right-click it → Open, or run <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code> in Terminal. <b>Windows:</b> if SmartScreen appears, click "More info" → "Run anyway".'
+      },
+      {
+        h: 'Updates',
+        p: 'When a new version is out, a notice appears at the top (and in Settings → Updates). <b>Download and install</b> fetches the right installer for your system into the Downloads folder and verifies its SHA-256. Then: on <b>Windows</b> "Close and install" closes the app (scheduled downloads stop), runs the installer and reopens it when done; on <b>macOS</b> and <b>Linux</b> "Open installer" opens the file, and you quit the app with "Quit" and install the new version. Nothing is installed unless you ask.'
       }
     ]
   },
@@ -303,6 +311,10 @@ const GUIDE_CONTENT = {
       {
         h: 'Primer inicio (app sin firmar)',
         p: 'La app es gratuita y no está firmada digitalmente. <b>macOS:</b> si aparece "app dañada" o no se abre, clic derecho → Abrir, o en Terminal: <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>. <b>Windows:</b> si aparece SmartScreen, pulsa "Más información" → "Ejecutar de todos modos".'
+      },
+      {
+        h: 'Actualizaciones',
+        p: 'Cuando sale una versión nueva aparece un aviso arriba (y en Ajustes → Actualizaciones). <b>Descargar e instalar</b> descarga en la carpeta Descargas el instalador adecuado para tu sistema y verifica su SHA-256. Después: en <b>Windows</b> "Cerrar e instalar" cierra la app (las descargas programadas se detienen), inicia la instalación y al terminar la vuelve a abrir; en <b>macOS</b> y <b>Linux</b> "Abrir instalador" abre el archivo, y tú cierras la app con "Salir" e instalas la versión nueva. No se instala nada sin que lo pidas.'
       }
     ]
   }
