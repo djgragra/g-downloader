@@ -1208,10 +1208,6 @@ const UI_TEXT = {
   "Version {latest} is available (installed: {current}).",
   "Versión {latest} disponible (instalada: {current})."
  ],
- "Sei aggiornato (versione {current}).": [
-  "You are up to date (version {current}).",
-  "Estás al día (versión {current})."
- ],
  "Invio in corso…": [
   "Sending…",
   "Enviando…"
@@ -1423,6 +1419,10 @@ const UI_TEXT = {
  "Installazione non avviata: {error}": [
   "Installation not started: {error}",
   "Instalación no iniciada: {error}"
+ ],
+ "Sei aggiornato (versione {current}) ✓": [
+  "You are up to date (version {current}) ✓",
+  "Estás al día (versión {current}) ✓"
  ]
 };
 

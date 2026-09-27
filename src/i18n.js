@@ -428,6 +428,14 @@ const TEXT = {
  "Download dell'aggiornamento non riuscito: {error}": [
   "Update download failed: {error}",
   "Falló la descarga de la actualización: {error}"
+ ],
+ "Il programma è ancora in esecuzione nella system tray.": [
+  "The program is still running in the system tray.",
+  "El programa sigue ejecutándose en la bandeja del sistema."
+ ],
+ "L'icona appare nell'area notifiche in basso a destra.\n\n• Doppio click sull'icona → riapri finestra\n• Tasto destro sull'icona → Esci → chiudi completamente": [
+  "The icon appears in the notification area at the bottom right.\n\n• Double click the icon → reopen window\n• Right click the icon → Quit → close completely",
+  "El icono aparece en el área de notificaciones abajo a la derecha.\n\n• Doble clic en el icono → reabrir ventana\n• Clic derecho en el icono → Salir → cerrar completamente"
  ]
 };
 

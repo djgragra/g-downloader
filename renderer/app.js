@@ -1696,11 +1696,17 @@ function renderSettings() {
     if (!info.ok) {
       // a failed check leaves a downloaded installer usable
       if (upd.state === 'ready') paintUpdate();
-      else out.textContent = L('Controllo non riuscito: ') + info.error;
+      else {
+        out.style.color = 'var(--err)';
+        out.textContent = L('Controllo non riuscito: ') + info.error;
+      }
     } else if (info.available) {
       showUpdateBanner(info);
       paintUpdate();
-    } else out.textContent = L('Sei aggiornato (versione {current}).', { current: info.current }) + (info.note ? ' ' + info.note + '.' : '');
+    } else {
+      out.style.color = 'var(--ok)';
+      out.textContent = L('Sei aggiornato (versione {current}) ✓', { current: info.current }) + (info.note ? ' ' + info.note + '.' : '');
+    }
   });
   paintUpdate();
   const minFileSizeInput = document.getElementById('setting-min-file-size');

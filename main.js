@@ -105,6 +105,16 @@ function createWindow() {
     if (!isQuitting) {
       e.preventDefault();
       mainWindow.hide();
+      dialog
+        .showMessageBox({
+          type: 'info',
+          title: 'G-Downloader',
+          message: M("Il programma è ancora in esecuzione nella system tray."),
+          detail: M("L'icona appare nell'area notifiche in basso a destra.\n\n• Doppio click sull'icona → riapri finestra\n• Tasto destro sull'icona → Esci → chiudi completamente"),
+          buttons: ['OK'],
+          icon: trayIcon(getSettings().trayIconStyle)
+        })
+        .catch(() => {});
     } else {
       setWindowBounds(mainWindow.getBounds());
     }
