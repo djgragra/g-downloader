@@ -160,6 +160,22 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <li>Una riga come <code>timeout /t 5</code>, <code>wait 5</code> o <code>sleep 5</code> viene interpretata come pausa di 5 secondi.</li>
 <li>Le righe vuote e quelle che iniziano con <code>::</code> o <code>REM</code> sono ignorate.</li></ul>
 <p>Con l'interruttore <b>«Se il comando fallisce, segna il task come errore»</b> decidi se un comando fallito interrompe la sequenza e conta come errore.</p>
+<h3>Eseguire solo una parte del task</h3>
+<p>Nell'editor, accanto a <b>▶ Esegui ora</b> (che scarica ed esegue le azioni), trovi:</p>
+<ul><li><b>⬇ Solo download</b>: scarica il file ma non lancia le azioni.</li>
+<li><b>⚙ Solo azioni</b>: esegue le azioni sul file già presente, senza scaricare. Serve, per esempio, quando il file ti è arrivato per email o è stato copiato a mano nella cartella e vuoi solo far partire il montaggio. L'app usa il file che il task avrebbe scaricato (stesso nome e cartella); se non c'è, prova con l'ultimo file scaricato; se nemmeno quello esiste, ti chiede di scegliere il file.</li>
+<li><b>▶ Esegui</b> su ogni azione: lancia quella sola azione, anche se è disattivata.</li></ul>
+<ul><li><b>📂 Azioni su un altro file…</b>: scegli tu un file qualsiasi e le azioni vengono eseguite su quello, anche se il task avrebbe un suo file.</li>
+<li><b>👁 Anteprima</b> su ogni azione: mostra i comandi con tutti i segnaposto già sostituiti (file, cartella, date), senza eseguirli. Utile per controllare di non lanciare il montaggio sul file sbagliato.</li></ul>
+<p>Accanto ai pulsanti, e nelle schede del Palinsesto, compare lo stato <b>«file presente»</b> (con il nome del file e da dove viene: file del task, ultimo scaricato o in attesa) oppure «nessun file: verrà chiesto».</p>
+<h3>Dopo il download: azioni, nessuna azione o conferma</h3>
+<p>In ogni <b>pianificazione</b> c'è l'opzione <b>Dopo il download</b>:</p>
+<table><tr><th>Scelta</th><th>Effetto</th></tr>
+<tr><td>Esegui le azioni successive</td><td>comportamento di sempre (predefinito)</td></tr>
+<tr><td>Solo download</td><td>scarica e basta; le azioni le lanci tu quando vuoi</td></tr>
+<tr><td>Aspetta la mia conferma e avvisami</td><td>scarica, poi invia una notifica (sistema, email e Telegram, se attivi) e segna il task come <b>«Azioni in attesa»</b>. Premi <b>▶ Esegui azioni ora</b> nell'editor del task (o <b>⚙ Solo azioni</b> nel Palinsesto) per farle partire.</td></tr></table>
+<p>L'opzione vale solo per i download avviati dalla pianificazione: «Esegui ora» esegue sempre tutto.</p>
+<p>«Solo azioni» è disponibile anche sulle schede del Palinsesto. Le esecuzioni parziali compaiono nella console e nella cronologia, ma non contano come download nelle statistiche.</p>
 <div class="warn">Le azioni eseguono comandi sul tuo computer. Importa solo file di task di cui ti fidi: l'app avvisa quando un file importato contiene comandi da eseguire.</div>
 """, True),
 ("Dashboard e palinsesto", """

@@ -971,3 +971,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .help-details code { background: var(--accent-dim); padding: 0 4px; border-radius: 3px; }
 .editor-actions { flex-wrap: wrap; align-items: center; }
 #run-edition { max-width: 210px; }
+
+.pending-card { border-color: var(--warn); }
+.action-preview {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 8px 0 0;
+  font: 12px ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

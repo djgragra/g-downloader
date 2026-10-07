@@ -270,7 +270,7 @@ function recordStat(taskId, entry) {
 export function appendHistory(id, entry) {
   const task = getTask(id);
   if (!task) return;
-  recordStat(id, entry);
+  if (entry.mode !== 'actions') recordStat(id, entry); // actions-only runs are not downloads
   task.history = [entry, ...(task.history || [])].slice(0, 50);
   task.lastRun = entry.finishedAt;
   task.lastStatus = entry.status;
@@ -314,6 +314,7 @@ export function importTask(data) {
     lastStatus: null,
     lastError: null,
     lastFileHash: null,
+    pendingActions: undefined, // a download waiting for its actions belongs to the exporting PC
     history: [],
     // Same as editing a schedule in the UI: only occurrences after the import count,
     // so importing at 10:20 does not immediately fire the 9:57 slot.

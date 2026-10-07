@@ -9,7 +9,7 @@ import { Client as FtpClient } from 'basic-ftp';
 import { dialog, Notification, BrowserWindow, shell } from 'electron';
 import { resolveTemplate, filenameFromUrl, cleanPath } from './templates.js';
 import { getTask, saveTask, getSettings, bumpSeq, appendHistory } from './store.js';
-import { runPostActions } from './actions.js';
+import { runPostActions, previewAction } from './actions.js';
 import { notifyFailure, notifyAlert } from './notifications.js';
 import { httpFetch } from './httpfetch.js';
 import { M } from './i18n.js';
@@ -370,15 +370,135 @@ export function runningTaskCount() {
 }
 
 // Same task never runs twice at once (e.g. a seconds-interval task slower than its interval).
+// opts.mode: 'full' (default: download, then the actions), 'download' (download only) or
+// 'actions' (only the post-download actions, on a file already on disk).
 export async function runTask(taskId, opts = {}) {
   if (activeRuns.has(taskId)) throw new Error(M("Task già in esecuzione"));
   activeRuns.add(taskId);
-  await acquireSlot(taskId);
+  const actionsOnly = opts.mode === 'actions';
   try {
-    return await runTaskInner(taskId, opts);
+    if (actionsOnly) return await runActionsOnly(taskId, opts);
+    await acquireSlot(taskId);
+    try {
+      return await runTaskInner(taskId, opts);
+    } finally {
+      releaseSlot();
+    }
   } finally {
-    releaseSlot();
     activeRuns.delete(taskId);
+  }
+}
+
+function codedError(code, message) {
+  const err = new Error(message);
+  err.code = code;
+  return err;
+}
+
+async function isFile(p) {
+  try {
+    return (await fsp.stat(p)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+// The file the actions should work on: the one the user picked, else the file the task would
+// have downloaded for this occurrence (e.g. placed there by hand), else the last downloaded one.
+async function resolveActionsFile(task, settings, ctx0, opts) {
+  if (opts.filepath) {
+    const picked = cleanPath(opts.filepath);
+    if (await isFile(picked)) return { filepath: picked, source: 'picked' };
+    throw codedError('no-file', M("File non trovato: {path}", { path: picked }));
+  }
+  const candidates = [];
+  // a download that is waiting for its actions to be confirmed comes first
+  if (task.pendingActions?.filepath) candidates.push({ p: task.pendingActions.filepath, source: 'pending' });
+  try {
+    const destFolder = cleanPath(task.destinationFolder || settings.defaultDestination || process.cwd());
+    let filename = null;
+    if (task.filenameMode === 'fixed') filename = resolveTemplate(task.fixedFilename, ctx0);
+    else if (task.filenameMode === 'template') filename = resolveTemplate(task.filenameTemplate, ctx0);
+    else if (task.filenameMode === 'fromUrl') {
+      filename = safeFileName(
+        task.sourceType === 'local'
+          ? path.basename(cleanPath(resolveTemplate(task.localPath, ctx0)))
+          : filenameFromUrl(resolveTemplate(task.url, ctx0))
+      );
+    }
+    if (filename) candidates.push({ p: path.join(destFolder, filename), source: 'expected' });
+  } catch {
+    /* name not computable: fall through to the history */
+  }
+  const lastDownload = (task.history || []).find((h) => h.status === 'success' && h.mode !== 'actions' && h.filepath);
+  if (lastDownload) candidates.push({ p: lastDownload.filepath, source: 'last' });
+  for (const c of candidates) if (await isFile(c.p)) return { filepath: c.p, source: c.source };
+  throw codedError('no-file', M("Nessun file trovato su cui eseguire le azioni: scegline uno."));
+}
+
+function clearPendingActions(taskId) {
+  const t = getTask(taskId);
+  if (t?.pendingActions) {
+    delete t.pendingActions;
+    saveTask(t);
+  }
+}
+
+// Which file "Actions only" would use right now, and where it comes from (never throws).
+export async function actionsFileInfo(taskId, opts = {}) {
+  const task = getTask(taskId);
+  if (!task) return { ok: false };
+  const now = opts.scheduledAt ? new Date(opts.scheduledAt) : new Date();
+  try {
+    const r = await resolveActionsFile(task, getSettings(), { now, seq: task.seqCounter || 0 }, opts);
+    return { ok: true, ...r, pending: !!task.pendingActions };
+  } catch {
+    return { ok: false, pending: !!task.pendingActions };
+  }
+}
+
+// The commands each action would run on the file "Actions only" would use (nothing is run).
+export async function previewTaskActions(taskId, action, opts = {}) {
+  const task = getTask(taskId);
+  if (!task) return { ok: false };
+  const info = await actionsFileInfo(taskId, opts);
+  const filepath = info.ok ? info.filepath : '<file>';
+  const ctx = { filepath, filename: path.basename(filepath), folder: info.ok ? path.dirname(filepath) : '<folder>', taskName: task.name };
+  return { ok: true, file: info.ok ? filepath : null, lines: previewAction(action, ctx) };
+}
+
+async function runActionsOnly(taskId, opts) {
+  const task = getTask(taskId);
+  if (!task) throw new Error(M("Task non trovato"));
+  const settings = getSettings();
+  const now = opts.scheduledAt ? new Date(opts.scheduledAt) : new Date();
+  const ctx0 = { now, seq: task.seqCounter || 0 };
+  const wanted = Array.isArray(opts.actionIds) && opts.actionIds.length ? new Set(opts.actionIds) : null;
+  const actions = (task.postActions || []).filter((a) => (wanted ? wanted.has(a.id) : a.enabled !== false));
+  if (!actions.length) throw codedError('no-actions', M("Il task non ha azioni da eseguire."));
+  // Resolved before anything is recorded: a missing file is not a failure, the user is asked for one.
+  const { filepath } = await resolveActionsFile(task, settings, ctx0, opts);
+
+  const startedAt = new Date().toISOString();
+  events.emit('task-started', { taskId });
+  const emitLog = (msg, level) => log(taskId, msg, level);
+  try {
+    emitLog(M("Solo azioni su: {path}", { path: filepath }));
+    const actionCtx = { filepath, filename: path.basename(filepath), folder: path.dirname(filepath), taskName: task.name };
+    await runPostActions(actions, actionCtx, (msg, level) => emitLog(msg, level), { force: !!wanted });
+    if (!wanted) clearPendingActions(taskId);
+    appendHistory(taskId, { startedAt, finishedAt: new Date().toISOString(), status: 'success', mode: 'actions', actionsFile: filepath });
+    events.emit('task-finished', { taskId, status: 'success' });
+    return { status: 'success', filepath, mode: 'actions' };
+  } catch (err) {
+    emitLog(`Errore: ${err.message}`, 'error');
+    appendHistory(taskId, { startedAt, finishedAt: new Date().toISOString(), status: 'error', mode: 'actions', error: err.message });
+    if (settings.notifyOnError && Notification.isSupported()) {
+      new Notification({ title: M("Errore: {name}", { name: task.name }), body: err.message }).show();
+    }
+    if (task.notifyOnFailure !== false) await notifyFailure(settings, task, err, emitLog);
+    events.emit('task-finished', { taskId, status: 'error', error: err.message });
+    throw err;
   }
 }
 
@@ -484,12 +604,29 @@ async function runTaskInner(taskId, opts = {}) {
       folder: path.dirname(finalPath),
       taskName: task.name
     };
-    await runPostActions(task.postActions, actionCtx, (msg, level) => emitLog(msg, level));
+    // What follows the download: the actions (default), nothing, or a wait for confirmation.
+    // A schedule can ask for the last two; a manual run only follows the buttons.
+    const after = opts.mode === 'download' ? 'none' : opts.fromScheduler ? opts.schedule?.afterDownload || 'actions' : 'actions';
+    if (after === 'none') {
+      emitLog(M("Solo download: le azioni successive non sono state eseguite."));
+    } else if (after === 'wait') {
+      const t2 = getTask(taskId);
+      t2.pendingActions = { filepath: finalPath, filename: path.basename(finalPath), at: new Date().toISOString() };
+      saveTask(t2);
+      const text = M("Il file del task \"{name}\" è pronto ({file}). Le azioni successive aspettano la tua conferma: premi \"Esegui azioni\" nell'app.", { name: task.name, file: path.basename(finalPath) });
+      emitLog(text, 'warn');
+      if (Notification.isSupported()) new Notification({ title: task.name, body: text }).show();
+      await notifyAlert(settings, M("[G-Downloader] File pronto: {name}", { name: task.name }), text, emitLog);
+    } else {
+      await runPostActions(task.postActions, actionCtx, (msg, level) => emitLog(msg, level));
+      clearPendingActions(taskId);
+    }
 
     appendHistory(taskId, {
       startedAt,
       finishedAt: new Date().toISOString(),
       status: 'success',
+      ...(after === 'none' ? { mode: 'download' } : after === 'wait' ? { mode: 'download', waiting: true } : {}),
       url: resolvedUrl,
       filepath: finalPath,
       bytes

@@ -616,6 +616,14 @@ function renderScheduleRow(s, idx) {
         <label>${L("URL solo per questa pianificazione (opzionale)")}</label>
         <input type="text" class="template-field" data-bind="schedules.${idx}.urlOverride" value="${escapeHtml(s.urlOverride || '')}" placeholder="${escapeHtml(L("Se vuoto usa l'URL del task — utile quando lo stesso prodotto ha un file diverso a seconda dell'orario o del giorno"))}" />
       </div>
+      <div class="field span-2">
+        <label>${L("Dopo il download")}</label>
+        <select data-bind="schedules.${idx}.afterDownload">
+          <option value="actions" ${(s.afterDownload || 'actions') === 'actions' ? 'selected' : ''}>${L("Esegui le azioni successive")}</option>
+          <option value="none" ${s.afterDownload === 'none' ? 'selected' : ''}>${L("Solo download: non eseguire le azioni")}</option>
+          <option value="wait" ${s.afterDownload === 'wait' ? 'selected' : ''}>${L("Aspetta la mia conferma e avvisami (email/Telegram)")}</option>
+        </select>
+      </div>
       <div class="schedule-preview" id="schedule-preview-${idx}" style="display:none"></div>
     </div>`;
 }
@@ -715,9 +723,12 @@ function renderActionRow(a, idx) {
           <span class="switch ${a.enabled === false ? '' : 'on'}" data-toggle="postActions.${idx}.enabled"></span>
           ${L("Attiva")}
         </label>
+        <button class="btn btn-sm" data-preview-action="${idx}" title="${escapeHtml(L("Mostra i comandi con i segnaposto già sostituiti, senza eseguirli"))}">${L("👁 Anteprima")}</button>
+        <button class="btn btn-sm" data-run-action="${idx}" title="${escapeHtml(L("Esegui solo questa azione sul file già presente (anche se è disattivata)"))}">${L("▶ Esegui")}</button>
         <button class="btn btn-ghost btn-icon" data-remove-action="${idx}" title="${escapeHtml(L("Rimuovi"))}">✕</button>
       </div>
       ${fields}
+      <pre class="action-preview" id="action-preview-${idx}" style="display:none"></pre>
     </div>`;
 }
 
@@ -1093,12 +1104,24 @@ function renderEditor() {
           <span class="switch ${t.runOnSave ? 'on' : ''}" data-toggle="runOnSave"></span>
           ${escapeHtml(tr('runOnSave'))}
         </label>
-        <button class="btn" id="btn-run-now">${escapeHtml(tr('runNow'))}</button>
+        <button class="btn" id="btn-run-now" title="${escapeHtml(L("Scarica il file ed esegue le azioni successive"))}">${escapeHtml(tr('runNow'))}</button>
+        <button class="btn" id="btn-run-download" title="${escapeHtml(L("Scarica il file senza eseguire le azioni successive"))}">${L("⬇ Solo download")}</button>
+        ${(t.postActions || []).length ? `<button class="btn" id="btn-run-actions" title="${escapeHtml(L("Esegue solo le azioni successive sul file già presente, senza scaricare"))}">${L("⚙ Solo azioni")}</button>
+        <button class="btn" id="btn-run-actions-other" title="${escapeHtml(L("Sceglie un file qualsiasi ed esegue le azioni su quello, senza scaricare"))}">${L("📂 Azioni su un altro file…")}</button>
+        <span class="hint" id="actions-file-status"></span>` : ''}
       </div>
     </div>
 
+    ${t.pendingActions ? `<div class="card pending-card">
+        <div class="card-head">
+          <h3>${L("⏸ Azioni in attesa di conferma")}</h3>
+          <button type="button" class="btn btn-sm btn-install" id="btn-run-pending">${L("▶ Esegui azioni ora")}</button>
+        </div>
+        <div class="hint">${escapeHtml(t.pendingActions.filename || '')} — ${escapeHtml(fmtDate(t.pendingActions.at))}</div>
+      </div>` : ''}
+
     ${(() => {
-      const last = (t.history || [])[0];
+      const last = (t.history || []).find((h) => h.mode !== 'actions');
       if (!last || last.status !== 'success' || !last.filepath) return '';
       const isAudio = AUDIO_EXTENSIONS.some((ext) => last.filepath.toLowerCase().endsWith(ext));
       return `<div class="card">
@@ -2154,16 +2177,45 @@ function bindEditorEvents() {
     });
 
   const runBtn = document.getElementById('btn-run-now');
-  if (runBtn)
-    runBtn.addEventListener('click', async () => {
-      await window.api.tasks.save(state.editing);
-      runBtn.disabled = true;
-      const result = await window.api.tasks.runNow(state.editing.id);
-      runBtn.disabled = false;
-      await refreshSidebar();
-      if (result.status === 'error') flashButton(runBtn, L('Errore ✕'));
-      else flashButton(runBtn, L('Fatto ✓'));
+  if (runBtn) runBtn.addEventListener('click', () => runPartFromEditor(runBtn, {}));
+  const runDownloadBtn = document.getElementById('btn-run-download');
+  if (runDownloadBtn) runDownloadBtn.addEventListener('click', () => runPartFromEditor(runDownloadBtn, { mode: 'download' }));
+  const runActionsBtn = document.getElementById('btn-run-actions');
+  if (runActionsBtn) runActionsBtn.addEventListener('click', () => runPartFromEditor(runActionsBtn, { mode: 'actions' }));
+  const runOtherBtn = document.getElementById('btn-run-actions-other');
+  if (runOtherBtn)
+    runOtherBtn.addEventListener('click', async () => {
+      const file = await window.api.dialogs.pickFile();
+      if (file) runPartFromEditor(runOtherBtn, { mode: 'actions', filepath: file });
     });
+  const runPendingBtn = document.getElementById('btn-run-pending');
+  if (runPendingBtn)
+    runPendingBtn.addEventListener('click', async () => {
+      const result = await runPartFromEditor(runPendingBtn, { mode: 'actions' });
+      if (result.status !== 'error') selectTask(state.editing.id);
+    });
+  paintActionsStatus(state.editing.id, document.getElementById('actions-file-status'));
+  root.querySelectorAll('[data-preview-action]').forEach((el) => {
+    el.addEventListener('click', async () => {
+      const idx = Number(el.dataset.previewAction);
+      const box = document.getElementById(`action-preview-${idx}`);
+      if (box.style.display !== 'none') {
+        box.style.display = 'none';
+        return;
+      }
+      await window.api.tasks.save(state.editing);
+      const r = await window.api.tasks.previewAction(state.editing.id, state.editing.postActions[idx]);
+      box.textContent =
+        (r.file ? L('File: {file}', { file: r.file }) : L('Nessun file trovato: vengono mostrati i segnaposto.')) + '\n' + (r.lines || []).join('\n');
+      box.style.display = '';
+    });
+  });
+  root.querySelectorAll('[data-run-action]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const action = state.editing.postActions[Number(el.dataset.runAction)];
+      if (action) runPartFromEditor(el, { mode: 'actions', actionIds: [action.id] });
+    });
+  });
 
   // "Run a past edition": for tasks whose URL depends on the scheduled time/date, offer the
   // latest scheduled occurrences, so an edition that was missed can be fetched by hand.
@@ -2176,7 +2228,7 @@ function bindEditorEvents() {
       sel.innerHTML =
         `<option value="">${L("Esegui edizione…")}</option>` +
         list.map((o, i) => `<option value="${i}">${escapeHtml(fmtDate(o.iso))}${o.scheduleLabel ? ' · ' + escapeHtml(o.scheduleLabel) : ''}</option>`).join('');
-      runBtn.after(sel);
+      (document.getElementById('btn-run-actions') || document.getElementById('btn-run-download') || runBtn).after(sel);
       sel.addEventListener('change', async () => {
         const o = list[Number(sel.value)];
         sel.value = '';
@@ -2190,6 +2242,40 @@ function bindEditorEvents() {
       });
     });
   }
+}
+
+// Runs a task (or only a part of it) and returns the result. When the actions find no file to
+// work on, the user is asked to pick one and the run is repeated on it.
+async function runTaskPart(id, opts = {}) {
+  let res = await window.api.tasks.runNow(id, opts);
+  if (res.status === 'error' && res.code === 'no-file') {
+    const file = confirm(L('Nessun file trovato per questo task. Vuoi scegliere il file su cui eseguire le azioni?')) ? await window.api.dialogs.pickFile() : null;
+    if (file) res = await window.api.tasks.runNow(id, { ...opts, filepath: file });
+  }
+  if (res.status === 'error' && res.code === 'no-actions') alert(res.error);
+  return res;
+}
+
+// Shows whether "Actions only" has a file to work on (and which), for the editor and the cards.
+async function paintActionsStatus(taskId, el) {
+  if (!el) return;
+  const info = await window.api.tasks.actionsStatus(taskId);
+  if (!document.body.contains(el)) return;
+  const sources = { pending: L('in attesa'), expected: L('file del task'), last: L('ultimo scaricato') };
+  const name = info.ok ? info.filepath.split(/[\\/]/).pop() : '';
+  el.textContent = info.ok ? `● ${L('file presente')}: ${name} (${sources[info.source] || ''})` : `○ ${L('nessun file: verrà chiesto')}`;
+  el.title = info.ok ? info.filepath : '';
+  el.style.color = info.ok ? 'var(--ok)' : 'var(--warn)';
+}
+
+async function runPartFromEditor(btn, opts) {
+  await window.api.tasks.save(state.editing);
+  document.querySelectorAll('#btn-run-now,#btn-run-download,#btn-run-actions,#btn-run-actions-other,[data-run-action]').forEach((b) => (b.disabled = true));
+  const result = await runTaskPart(state.editing.id, opts);
+  document.querySelectorAll('#btn-run-now,#btn-run-download,#btn-run-actions,#btn-run-actions-other,[data-run-action]').forEach((b) => (b.disabled = false));
+  await refreshSidebar();
+  if (btn && document.body.contains(btn)) flashButton(btn, result.status === 'error' ? L('Errore ✕') : L('Fatto ✓'));
+  return result;
 }
 
 function flashButton(btn, text) {
@@ -2387,7 +2473,7 @@ async function renderTasksPage() {
         const history = t.history || [];
         const ok = history.filter((h) => h.status === 'success').length;
         const ko = history.filter((h) => h.status === 'error').length;
-        const last = history[0];
+        const last = history.find((h) => h.mode !== 'actions');
         const schedules = (t.schedules || []).filter((s) => s.enabled !== false);
         const source = t.sourceType === 'local' ? t.localPath : t.url;
         const running = !!state.activeDownloads[t.id];
@@ -2408,6 +2494,7 @@ async function renderTasksPage() {
           ${running ? `<span class="badge badge-idle">${L("⏳ In corso")}</span>` : ''}
           ${t.enabled ? `<span class="badge badge-ok">${L("Attivo")}</span>` : `<span class="badge badge-off">${L("Disattivo")}</span>`}
           ${statusBadge({ ...t, enabled: true })}
+          ${t.pendingActions ? `<span class="badge badge-idle">${L("⏸ Azioni in attesa")}</span>` : ''}
         </div>
         <div class="task-card-sched">
           ${schedules.length ? schedules.map((s) => `<div><b>${escapeHtml(s.label || L('Pianificazione'))}</b><span>${escapeHtml(describeSchedule(s))}</span></div>`).join('') : `<div><span>${L("Nessuna pianificazione attiva")}</span></div>`}
@@ -2416,11 +2503,13 @@ async function renderTasksPage() {
           <div><span>${L("Ultimo download")}</span><b>${last ? fmtDate(last.finishedAt) : '—'}${last && last.bytes ? ` · ${formatBytes(last.bytes)}` : ''}</b></div>
           ${t.lastStatus === 'error' && t.lastError ? `<div class="task-card-error"><span>${L("Ultimo errore")}</span><b>${escapeHtml(t.lastError)}</b></div>` : ''}
           <div><span>${L('Esito (ultimi {n})', { n: history.length })}</span><b><span style="color:var(--ok)">${ok} ok</span> · <span style="color:${ko ? 'var(--err)' : 'var(--text-dim)'}">${ko} ${L('falliti')}</span></b></div>
+          ${(t.postActions || []).some((a) => a.enabled !== false) ? `<div><span>${L("Azioni")}</span><b data-actions-status="${t.id}">…</b></div>` : ''}
           <div><span>${L("Sorgente")}</span><b title="${escapeHtml(source || '')}">${escapeHtml(source || '—')}</b></div>
           <div><span>${L("Destinazione")}</span><b title="${escapeHtml(t.destinationFolder || '')}">${escapeHtml(t.destinationFolder || L('Cartella predefinita'))}</b></div>
         </div>
         <div class="task-card-actions">
           <button class="btn btn-sm" data-run-task="${t.id}" ${running ? 'disabled' : ''}>${L("▶ Esegui ora")}</button>
+          ${(t.postActions || []).some((a) => a.enabled !== false) ? `<button class="btn btn-sm" data-run-task-actions="${t.id}" ${running ? 'disabled' : ''} title="${escapeHtml(L("Esegue solo le azioni successive sul file già presente, senza scaricare"))}">${L("⚙ Solo azioni")}</button>` : ''}
           ${last && last.filepath ? `<button class="btn btn-sm" data-reveal-file="${escapeHtml(last.filepath)}" title="${escapeHtml(L("Mostra l'ultimo file scaricato"))}">${L("📂 File")}</button>` : ''}
           <button class="btn btn-sm" data-toggle-task="${t.id}">${t.enabled ? L('⏸ Disattiva') : L('▶ Attiva')}</button>
           <button class="btn btn-sm btn-primary" data-open-task-btn="${t.id}">${L("Modifica")}</button>
@@ -2452,13 +2541,21 @@ async function renderTasksPage() {
   root.querySelectorAll('[data-open-task]').forEach((el) => {
     el.addEventListener('click', () => selectTask(el.dataset.openTask));
   });
-  root.querySelectorAll('[data-open-task-btn],[data-run-task],[data-toggle-task],[data-reveal-file]').forEach((el) => {
+  root.querySelectorAll('[data-open-task-btn],[data-run-task],[data-run-task-actions],[data-toggle-task],[data-reveal-file]').forEach((el) => {
     el.addEventListener('click', (e) => e.stopPropagation());
   });
   root.querySelectorAll('[data-run-task]').forEach((el) => {
     el.addEventListener('click', async () => {
       el.disabled = true;
       await window.api.tasks.runNow(el.dataset.runTask);
+      await refreshSidebar();
+    });
+  });
+  root.querySelectorAll('[data-actions-status]').forEach((el) => paintActionsStatus(el.dataset.actionsStatus, el));
+  root.querySelectorAll('[data-run-task-actions]').forEach((el) => {
+    el.addEventListener('click', async () => {
+      el.disabled = true;
+      await runTaskPart(el.dataset.runTaskActions, { mode: 'actions' });
       await refreshSidebar();
     });
   });

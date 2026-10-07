@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('api', {
     save: (task) => ipcRenderer.invoke('tasks:save', task),
     delete: (id) => ipcRenderer.invoke('tasks:delete', id),
     runNow: (id, edition) => ipcRenderer.invoke('tasks:run-now', id, edition),
+    actionsStatus: (id) => ipcRenderer.invoke('tasks:actions-status', id),
+    previewAction: (id, action) => ipcRenderer.invoke('tasks:preview-action', id, action),
     recentOccurrences: (id) => ipcRenderer.invoke('tasks:recent-occurrences', id),
     exportOne: (id) => ipcRenderer.invoke('task:export', id),
     importOne: () => ipcRenderer.invoke('task:import')

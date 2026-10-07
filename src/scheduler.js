@@ -182,7 +182,7 @@ async function tick() {
     } else if (dueSchedule) {
       saveTask(task); // persist lastFired/fired before running to avoid double-fire on overlap
       onLog(task.id, M("Pianificazione \"{name}\" attivata, avvio download...", { name: dueSchedule.label || dueSchedule.type }));
-      runTask(task.id, { schedule: dueSchedule, scheduledAt: dueFiredAt }).catch((err) => {
+      runTask(task.id, { schedule: dueSchedule, scheduledAt: dueFiredAt, fromScheduler: true }).catch((err) => {
         onLog(task.id, M("Errore imprevisto scheduler: {message}", { message: err.message }), 'error');
       });
     }

@@ -436,6 +436,42 @@ const TEXT = {
  "L'icona appare nell'area notifiche in basso a destra.\n\n• Doppio click sull'icona → riapri finestra\n• Tasto destro sull'icona → Esci → chiudi completamente": [
   "The icon appears in the notification area at the bottom right.\n\n• Double click the icon → reopen window\n• Right click the icon → Quit → close completely",
   "El icono aparece en el área de notificaciones abajo a la derecha.\n\n• Doble clic en el icono → reabrir ventana\n• Clic derecho en el icono → Salir → cerrar completamente"
+ ],
+ "Nessun file trovato su cui eseguire le azioni: scegline uno.": [
+  "No file found to run the actions on: pick one.",
+  "No se ha encontrado ningún archivo sobre el que ejecutar las acciones: elige uno."
+ ],
+ "Il task non ha azioni da eseguire.": [
+  "The task has no actions to run.",
+  "La tarea no tiene acciones que ejecutar."
+ ],
+ "Solo azioni su: {path}": [
+  "Actions only, on: {path}",
+  "Solo acciones sobre: {path}"
+ ],
+ "Solo download: le azioni successive non sono state eseguite.": [
+  "Download only: the following actions were not run.",
+  "Solo descarga: no se han ejecutado las acciones posteriores."
+ ],
+ "(cartella di lavoro: {cwd})": [
+  "(working folder: {cwd})",
+  "(carpeta de trabajo: {cwd})"
+ ],
+ "Sposta {file} in: {dest}": [
+  "Moves {file} to: {dest}",
+  "Mueve {file} a: {dest}"
+ ],
+ "Apre: {target}": [
+  "Opens: {target}",
+  "Abre: {target}"
+ ],
+ "Il file del task \"{name}\" è pronto ({file}). Le azioni successive aspettano la tua conferma: premi \"Esegui azioni\" nell'app.": [
+  "The file of the task \"{name}\" is ready ({file}). The following actions are waiting for your confirmation: press \"Run actions\" in the app.",
+  "El archivo de la tarea \"{name}\" está listo ({file}). Las acciones posteriores esperan tu confirmación: pulsa \"Ejecutar acciones\" en la app."
+ ],
+ "[G-Downloader] File pronto: {name}": [
+  "[G-Downloader] File ready: {name}",
+  "[G-Downloader] Archivo listo: {name}"
  ]
 };
 

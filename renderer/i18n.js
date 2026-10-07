@@ -217,6 +217,10 @@ const GUIDE_CONTENT = {
         p: 'Se un file con lo stesso nome esiste già nella cartella di destinazione, viene conservato rinominato: il nome pulito resta sempre riservato all\'ultimo file scaricato.'
       },
       {
+        h: 'Eseguire solo una parte',
+        p: 'Nell\'editor di un task <b>⬇ Solo download</b> scarica il file senza lanciare le azioni successive; <b>⚙ Solo azioni</b> esegue le azioni sul file già presente, senza scaricare (utile se hai ricevuto il file in un altro modo). Ogni azione ha anche il suo pulsante <b>▶ Esegui</b>, che la lancia da sola anche se è disattivata. Se il file non si trova, l\'app ti chiede di sceglierlo; <b>📂 Azioni su un altro file…</b> le applica a un file qualsiasi. <b>👁 Anteprima</b> su un\'azione mostra i comandi con i segnaposto già sostituiti, senza eseguirli. In ogni pianificazione, <b>Dopo il download</b> permette di non eseguire le azioni oppure di aspettare la tua conferma (con avviso email/Telegram): il task mostra "Azioni in attesa" e <b>▶ Esegui azioni ora</b>.'
+      },
+      {
         h: 'Primo avvio (app non firmata)',
         p: 'L\'app è gratuita e non è firmata digitalmente. <b>macOS:</b> se compare "app danneggiata" o non si apre, clic destro → Apri, oppure nel Terminale: <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>. <b>Windows:</b> se compare SmartScreen, clicca "Ulteriori informazioni" → "Esegui comunque".'
       },
@@ -263,6 +267,10 @@ const GUIDE_CONTENT = {
         p: 'If a file with the same name already exists in the destination folder, it is kept but renamed: the clean name is always reserved for the most recently downloaded file.'
       },
       {
+        h: 'Running only part of a task',
+        p: 'In a task\'s editor <b>⬇ Download only</b> fetches the file without running the actions that follow; <b>⚙ Actions only</b> runs the actions on the file already there, without downloading (handy if you got the file another way). Each action also has its own <b>▶ Run</b> button, which runs it alone even if it is switched off. If the file cannot be found, the app asks you to pick it; <b>📂 Actions on another file…</b> applies them to any file. <b>👁 Preview</b> on an action shows the commands with the placeholders already filled in, without running them. In each schedule, <b>After the download</b> lets you skip the actions or wait for your confirmation (with an email/Telegram notice): the task then shows "Actions waiting" and <b>▶ Run actions now</b>.'
+      },
+      {
         h: 'First launch (unsigned app)',
         p: 'The app is free and not code-signed. <b>macOS:</b> if it says the app is damaged or cannot be opened, right-click it → Open, or run <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code> in Terminal. <b>Windows:</b> if SmartScreen appears, click "More info" → "Run anyway".'
       },
@@ -307,6 +315,10 @@ const GUIDE_CONTENT = {
       {
         h: 'Archivos duplicados',
         p: 'Si ya existe un archivo con el mismo nombre en la carpeta de destino, se conserva pero se renombra: el nombre limpio queda siempre reservado para el archivo descargado más recientemente.'
+      },
+      {
+        h: 'Ejecutar solo una parte',
+        p: 'En el editor de una tarea, <b>⬇ Solo descarga</b> baja el archivo sin ejecutar las acciones posteriores; <b>⚙ Solo acciones</b> ejecuta las acciones sobre el archivo ya presente, sin descargar (útil si recibiste el archivo de otra forma). Cada acción tiene también su botón <b>▶ Ejecutar</b>, que la lanza sola aunque esté desactivada. Si no se encuentra el archivo, la app te pide que lo elijas; <b>📂 Acciones sobre otro archivo…</b> las aplica a cualquier archivo. <b>👁 Vista previa</b> en una acción muestra los comandos con los marcadores ya sustituidos, sin ejecutarlos. En cada programación, <b>Después de la descarga</b> permite no ejecutar las acciones o esperar tu confirmación (con aviso por correo/Telegram): la tarea muestra entonces "Acciones en espera" y <b>▶ Ejecutar acciones ahora</b>.'
       },
       {
         h: 'Primer inicio (app sin firmar)',

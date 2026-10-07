@@ -134,9 +134,38 @@ async function notify(action, ctx, log) {
   }
 }
 
-export async function runPostActions(postActions, ctx, log) {
+// What an action would do for this file, with every placeholder filled in (nothing is executed).
+export function previewAction(action, ctx) {
+  const now = { now: new Date() };
+  const expand = (str) => resolveTemplate(fillContext(str, ctx), now);
+  switch (action.type) {
+    case 'run': {
+      const lines =
+        action.mode === 'line'
+          ? String(action.commandLine || '')
+              .split(/\r?\n/)
+              .map((l) => l.trim())
+              .filter((l) => l && !l.startsWith('::') && !/^rem(\s|$)/i.test(l))
+              .map(expand)
+          : [`${cleanPath(expand(action.command || ''))} ${(action.args || []).map(expand).join(' ')}`.trim()];
+      const cwd = cleanPath(action.cwd ? expand(action.cwd) : ctx.folder);
+      return [...lines, M("(cartella di lavoro: {cwd})", { cwd })];
+    }
+    case 'move':
+      return [M("Sposta {file} in: {dest}", { file: ctx.filepath, dest: cleanPath(expand(action.targetFolder || '')) })];
+    case 'open':
+      return [M("Apre: {target}", { target: action.target === 'folder' ? ctx.folder : ctx.filepath })];
+    case 'notify':
+      return [`${fillContext(action.title || ctx.taskName, ctx)} - ${fillContext(action.body || M("Download completato: {filename}"), ctx)}`];
+    default:
+      return [];
+  }
+}
+
+// force: run the given actions even when switched off (used when the user starts them by hand).
+export async function runPostActions(postActions, ctx, log, { force = false } = {}) {
   for (const action of postActions || []) {
-    if (action.enabled === false) continue;
+    if (action.enabled === false && !force) continue;
     try {
       switch (action.type) {
         case 'run':

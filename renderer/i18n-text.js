@@ -1423,6 +1423,110 @@ const UI_TEXT = {
  "Sei aggiornato (versione {current}) ✓": [
   "You are up to date (version {current}) ✓",
   "Estás al día (versión {current}) ✓"
+ ],
+ "Scarica il file ed esegue le azioni successive": [
+  "Downloads the file and runs the actions that follow",
+  "Descarga el archivo y ejecuta las acciones posteriores"
+ ],
+ "Scarica il file senza eseguire le azioni successive": [
+  "Downloads the file without running the actions that follow",
+  "Descarga el archivo sin ejecutar las acciones posteriores"
+ ],
+ "⬇ Solo download": [
+  "⬇ Download only",
+  "⬇ Solo descarga"
+ ],
+ "Esegue solo le azioni successive sul file già presente, senza scaricare": [
+  "Runs only the post-download actions on the file already there, without downloading",
+  "Ejecuta solo las acciones posteriores sobre el archivo ya presente, sin descargar"
+ ],
+ "⚙ Solo azioni": [
+  "⚙ Actions only",
+  "⚙ Solo acciones"
+ ],
+ "Esegui solo questa azione sul file già presente (anche se è disattivata)": [
+  "Run only this action on the file already there (even if it is switched off)",
+  "Ejecuta solo esta acción sobre el archivo ya presente (aunque esté desactivada)"
+ ],
+ "▶ Esegui": [
+  "▶ Run",
+  "▶ Ejecutar"
+ ],
+ "Nessun file trovato per questo task. Vuoi scegliere il file su cui eseguire le azioni?": [
+  "No file found for this task. Do you want to pick the file to run the actions on?",
+  "No se ha encontrado ningún archivo para esta tarea. ¿Quieres elegir el archivo sobre el que ejecutar las acciones?"
+ ],
+ "Dopo il download": [
+  "After the download",
+  "Después de la descarga"
+ ],
+ "Esegui le azioni successive": [
+  "Run the following actions",
+  "Ejecutar las acciones posteriores"
+ ],
+ "Solo download: non eseguire le azioni": [
+  "Download only: do not run the actions",
+  "Solo descarga: no ejecutar las acciones"
+ ],
+ "Aspetta la mia conferma e avvisami (email/Telegram)": [
+  "Wait for my confirmation and notify me (email/Telegram)",
+  "Esperar mi confirmación y avisarme (correo/Telegram)"
+ ],
+ "Sceglie un file qualsiasi ed esegue le azioni su quello, senza scaricare": [
+  "Picks any file and runs the actions on it, without downloading",
+  "Elige un archivo cualquiera y ejecuta las acciones sobre él, sin descargar"
+ ],
+ "📂 Azioni su un altro file…": [
+  "📂 Actions on another file…",
+  "📂 Acciones sobre otro archivo…"
+ ],
+ "⏸ Azioni in attesa di conferma": [
+  "⏸ Actions waiting for confirmation",
+  "⏸ Acciones a la espera de confirmación"
+ ],
+ "▶ Esegui azioni ora": [
+  "▶ Run actions now",
+  "▶ Ejecutar acciones ahora"
+ ],
+ "Mostra i comandi con i segnaposto già sostituiti, senza eseguirli": [
+  "Shows the commands with the placeholders already filled in, without running them",
+  "Muestra los comandos con los marcadores ya sustituidos, sin ejecutarlos"
+ ],
+ "File: {file}": [
+  "File: {file}",
+  "Archivo: {file}"
+ ],
+ "Nessun file trovato: vengono mostrati i segnaposto.": [
+  "No file found: the placeholders are shown as they are.",
+  "No se ha encontrado ningún archivo: se muestran los marcadores tal cual."
+ ],
+ "in attesa": [
+  "waiting",
+  "en espera"
+ ],
+ "file del task": [
+  "task file",
+  "archivo de la tarea"
+ ],
+ "ultimo scaricato": [
+  "last downloaded",
+  "último descargado"
+ ],
+ "file presente": [
+  "file present",
+  "archivo presente"
+ ],
+ "nessun file: verrà chiesto": [
+  "no file: you will be asked",
+  "ningún archivo: se te preguntará"
+ ],
+ "⏸ Azioni in attesa": [
+  "⏸ Actions waiting",
+  "⏸ Acciones en espera"
+ ],
+ "Azioni": [
+  "Actions",
+  "Acciones"
  ]
 };
 

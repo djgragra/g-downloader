@@ -9,7 +9,7 @@ By Graziano Melzi · [OnAir Garage](https://onairgarage.com) — contact: hello@
 - **Dynamic URLs and filenames**: `{date:yyyyMMdd}`, `{time:HHmmss}`, `{seq:4}`, `{rand:6}`, `{env:NAME}`, with date offsets.
 - **Sources**: HTTP(S) (with basic auth and POST body), FTP/FTPS, local or network files.
 - **Flexible schedules**: several independent schedules per task (weekdays + times, one-off, every N minutes/hours, cron expression), with optional start/end.
-- **Post-download actions**: run a program, move the file, open it, system notification; placeholders `{filepath}` `{filename}` `{folder}` `{taskName}`.
+- **Post-download actions**: run a program, move the file, open it, system notification; placeholders `{filepath}` `{filename}` `{folder}` `{taskName}`. Download and actions can also be run **separately and by hand** (*Download only*, *Actions only*, *Actions on another file…*, or a single action, with a *Preview* of the resolved commands), e.g. when a file arrived by email. Each schedule can also stop after the download, or wait for your confirmation (with an email/Telegram notice) before running the actions.
 - **Pre-download folder action** and duplicate protection (existing files are renamed, never overwritten).
 - **Retries** (global and per task) with email / Telegram alerts on failure.
 - **Dashboard**, categories, download history, daily statistics, light/dark theme.

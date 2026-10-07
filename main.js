@@ -21,7 +21,7 @@ import {
   migrateSecrets
 } from './src/store.js';
 import { startScheduler, lastScheduledOccurrence, recentOccurrences, nextRunForTask, computeQueue, findMissedOccurrences, upcomingOccurrencesForSchedule } from './src/scheduler.js';
-import { runTaskNow, runningTaskCount, events as downloadEvents } from './src/downloader.js';
+import { runTaskNow, runningTaskCount, actionsFileInfo, previewTaskActions, events as downloadEvents } from './src/downloader.js';
 import { testEmail, testTelegram } from './src/notifications.js';
 import { checkForUpdate, downloadInstaller } from './src/updater.js';
 import { appendFileLog, pruneOldLogs, getLogDir } from './src/filelog.js';
@@ -320,7 +320,10 @@ ipcMain.handle('tasks:new-template', () => newTaskTemplate());
 ipcMain.handle('tasks:save', (_e, task) => {
   const existing = getTask(task.id);
   if (existing) {
-    for (const k of ['history', 'lastRun', 'lastStatus', 'lastError', 'lastFileHash', 'seqCounter']) task[k] = existing[k];
+    for (const k of ['history', 'lastRun', 'lastStatus', 'lastError', 'lastFileHash', 'seqCounter', 'pendingActions']) {
+      if (existing[k] === undefined) delete task[k];
+      else task[k] = existing[k];
+    }
     const byId = new Map((existing.schedules || []).map((sc) => [sc.id, sc]));
     for (const sc of task.schedules || []) {
       const ex = byId.get(sc.id);
@@ -348,22 +351,33 @@ ipcMain.handle('tasks:recent-occurrences', (_e, id) => {
   }));
 });
 
+// Manual run of a task named after its edition ({time} in the URL): behave like the
+// last scheduled occurrence, otherwise the file would be looked up under the click time.
+function manualOccurrence(task) {
+  const usesTime = task && /{time/.test(`${task.url || ''}${task.localPath || ''}`);
+  const last = usesTime ? lastScheduledOccurrence(task) : null;
+  return last ? { schedule: last.schedule, scheduledAt: last.when.toISOString() } : {};
+}
+
+// File "Actions only" would work on, for the status shown next to the button.
+ipcMain.handle('tasks:actions-status', (_e, id) => actionsFileInfo(id, manualOccurrence(getTask(id))));
+// The commands an action would run, placeholders filled in, without running them.
+ipcMain.handle('tasks:preview-action', (_e, id, action) => previewTaskActions(id, action, manualOccurrence(getTask(id))));
+
 ipcMain.handle('tasks:run-now', async (_e, id, edition) => {
   try {
+    // mode: 'download' (no actions) | 'actions' (no download); actionIds: only these actions;
+    // filepath: the file the actions work on. All optional: no mode = download, then actions.
+    const extra = { mode: edition?.mode, actionIds: edition?.actionIds, filepath: edition?.filepath };
     // A specific past edition chosen by the user ("Esegui edizione…").
     if (edition?.scheduledAt) {
       const t = getTask(id);
       const schedule = (t?.schedules || []).find((sc) => sc.id === edition.scheduleId);
-      return await runTaskNow(id, { schedule, scheduledAt: edition.scheduledAt });
+      return await runTaskNow(id, { schedule, scheduledAt: edition.scheduledAt, ...extra });
     }
-    // Manual run of a task named after its edition ({time} in the URL): behave like the
-    // last scheduled occurrence, otherwise the file would be looked up under the click time.
-    const task = getTask(id);
-    const usesTime = task && /{time/.test(`${task.url || ''}${task.localPath || ''}`);
-    const last = usesTime ? lastScheduledOccurrence(task) : null;
-    return await runTaskNow(id, last ? { schedule: last.schedule, scheduledAt: last.when.toISOString() } : {});
+    return await runTaskNow(id, { ...manualOccurrence(getTask(id)), ...extra });
   } catch (err) {
-    return { status: 'error', error: err.message };
+    return { status: 'error', error: err.message, code: err.code };
   }
 });
 

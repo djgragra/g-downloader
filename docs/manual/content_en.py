@@ -160,6 +160,22 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <li>A line such as <code>timeout /t 5</code>, <code>wait 5</code> or <code>sleep 5</code> is interpreted as a 5-second pause.</li>
 <li>Empty lines and lines starting with <code>::</code> or <code>REM</code> are ignored.</li></ul>
 <p>The <b>"If the command fails, mark the task as failed"</b> switch decides whether a failed command stops the sequence and counts as an error.</p>
+<h3>Running only part of a task</h3>
+<p>In the editor, next to <b>▶ Run now</b> (which downloads and runs the actions), you will find:</p>
+<ul><li><b>⬇ Download only</b>: downloads the file but does not run the actions.</li>
+<li><b>⚙ Actions only</b>: runs the actions on the file already there, without downloading. Useful, for example, when the file reached you by email or was copied into the folder by hand and you only want to start the editing. The app uses the file the task would have downloaded (same name and folder); if it is not there it tries the last downloaded file; if that does not exist either, it asks you to pick the file.</li>
+<li><b>▶ Run</b> on each action: runs that single action, even if it is switched off.</li></ul>
+<ul><li><b>📂 Actions on another file…</b>: you pick any file and the actions run on that one, even if the task has a file of its own.</li>
+<li><b>👁 Preview</b> on each action: shows the commands with all placeholders already filled in (file, folder, dates), without running them. Handy to make sure you do not start the editing on the wrong file.</li></ul>
+<p>Next to the buttons, and on the Schedule cards, the <b>"file present"</b> status appears (with the file name and where it comes from: task file, last downloaded or waiting) or "no file: you will be asked".</p>
+<h3>After the download: actions, no actions or confirmation</h3>
+<p>Every <b>schedule</b> has an <b>After the download</b> option:</p>
+<table><tr><th>Choice</th><th>Effect</th></tr>
+<tr><td>Run the following actions</td><td>the usual behaviour (default)</td></tr>
+<tr><td>Download only</td><td>just downloads; you start the actions whenever you like</td></tr>
+<tr><td>Wait for my confirmation and notify me</td><td>downloads, then sends a notification (system, email and Telegram, if enabled) and marks the task as <b>"Actions waiting"</b>. Press <b>▶ Run actions now</b> in the task editor (or <b>⚙ Actions only</b> in the Schedule) to start them.</td></tr></table>
+<p>The option only applies to downloads started by the schedule: "Run now" always runs everything.</p>
+<p>"Actions only" is also available on the Schedule cards. Partial runs appear in the console and the history, but do not count as downloads in the statistics.</p>
 <div class="warn">Actions run commands on your computer. Only import task files you trust: the app warns you when an imported file contains commands to be run.</div>
 """, True),
 ("Dashboard and schedule", """
