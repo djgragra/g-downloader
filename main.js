@@ -21,8 +21,8 @@ import {
   migrateSecrets
 } from './src/store.js';
 import { startScheduler, lastScheduledOccurrence, recentOccurrences, nextRunForTask, computeQueue, findMissedOccurrences, upcomingOccurrencesForSchedule } from './src/scheduler.js';
-import { runTaskNow, runningTaskCount, actionsFileInfo, previewTaskActions, events as downloadEvents } from './src/downloader.js';
-import { testEmail, testTelegram } from './src/notifications.js';
+import { runTaskNow, runningTaskCount, actionsFileInfo, previewTaskActions, previewCleanup, events as downloadEvents } from './src/downloader.js';
+import { testEmail, testTelegram, notifyAlert } from './src/notifications.js';
 import { checkForUpdate, downloadInstaller } from './src/updater.js';
 import { appendFileLog, pruneOldLogs, getLogDir } from './src/filelog.js';
 import { M } from './src/i18n.js';
@@ -362,6 +362,8 @@ function manualOccurrence(task) {
 // File "Actions only" would work on, for the status shown next to the button.
 ipcMain.handle('tasks:actions-status', (_e, id) => actionsFileInfo(id, manualOccurrence(getTask(id))));
 // The commands an action would run, placeholders filled in, without running them.
+// What the folder cleanup would do right now (nothing is touched).
+ipcMain.handle('tasks:preview-cleanup', (_e, id) => previewCleanup(id, manualOccurrence(getTask(id))));
 ipcMain.handle('tasks:preview-action', (_e, id, action) => previewTaskActions(id, action, manualOccurrence(getTask(id))));
 
 ipcMain.handle('tasks:run-now', async (_e, id, edition) => {
@@ -422,7 +424,22 @@ async function runUpdateCheck(manual) {
   if (!manual && info.available && mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('event:update-available', info);
   }
+  if (!manual && info.available) await notifyNewVersion(info);
   return info;
+}
+
+// A machine nobody looks at still gets to know: ONE message per new version through the
+// channels already used for failures (email / Telegram), if at least one is switched on.
+async function notifyNewVersion(info) {
+  const settings = getSettings();
+  const n = settings.notifications || {};
+  if (settings.notifyNewVersion === false || settings.lastNotifiedVersion === info.latest) return;
+  if (!n.email?.enabled && !n.telegram?.enabled) return;
+  const text = M("È disponibile la nuova versione {latest} di G-Downloader (installata: {current}).\nApri l'app: in alto trovi l'avviso con \"Scarica e installa\".\n{url}", { latest: info.latest, current: info.current, url: info.url });
+  updateSettings({ lastNotifiedVersion: info.latest });
+  await notifyAlert(settings, M("[G-Downloader] Nuova versione {latest} disponibile", { latest: info.latest }), text, (msg, level) =>
+    appendFileLog({ taskId: 'SISTEMA', level: level || 'info', message: msg })
+  );
 }
 function scheduleUpdateChecks() {
   setTimeout(() => getSettings().checkUpdates && runUpdateCheck(false), 15_000);

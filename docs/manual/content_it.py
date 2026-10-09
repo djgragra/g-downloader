@@ -141,10 +141,19 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <tr><td>Azione</td><td>Non fare nulla · Elimina file · Sposta altrove i file</td></tr>
 <tr><td>A quali file</td><td>tutto il contenuto · solo il file con lo stesso nome · solo i file che corrispondono a un modello (es. <code>report_*.mp3; *.tmp</code>) · solo i file più vecchi di N giorni/ore · tutti tranne gli ultimi N più recenti</td></tr>
 <tr><td>Sottocartelle</td><td>includerle oppure toccare solo i file</td></tr>
-<tr><td>Come eliminare</td><td>definitivamente oppure nel cestino (non funziona sulle cartelle di rete)</td></tr>
+<tr><td>Come eliminare</td><td>definitivamente · nel cestino del sistema (non funziona sulle cartelle di rete) · in una sottocartella <code>_cestino</code> che si svuota da sola dopo N giorni (funziona anche in rete)</td></tr>
 <tr><td>Quando</td><td>prima di scaricare · oppure solo dopo un download riuscito</td></tr></table>
 <div class="warn"><b>Attenzione:</b> con «Elimina file» e «Tutto il contenuto» vengono cancellati <b>tutti</b> i file della cartella, anche quelli non scaricati da questo task. Se la cartella è condivisa con altri task o programmi scegli «solo il file con lo stesso nome» o un modello. Con «Prima di scaricare», se il download poi fallisce i file eliminati non tornano: per cancellare solo a download riuscito scegli «Solo dopo un download riuscito». L'app rifiuta comunque di svuotare la radice di un disco.</div>
-<h3>9.5 Verifica dell'integrità</h3>
+<h3>9.5 Sicurezza e manutenzione della cartella</h3>
+<ul>
+<li><b>A prova di errore</b> (con «Prima di scaricare»): i file da eliminare o spostare vengono prima <i>messi da parte</i> in una cartella nascosta. Se il download riesce, la pulizia viene completata; se fallisce, i file tornano al loro posto. Se l'app si interrompe nel mezzo, al lancio successivo li rimette a posto da sola.</li>
+<li><b>Cestino a scadenza</b>: con «In una sottocartella <code>_cestino</code>» i file eliminati finiscono in <code>_cestino/data-ora</code> dentro la cartella di destinazione e vengono cancellati per sempre dopo il numero di giorni scelto. La cartella <code>_cestino</code> non viene mai toccata dalla pulizia.</li>
+<li><b>Copie vecchie</b> (<code>nome.old-data.ext</code>): quando un file nuovo sostituisce uno con lo stesso nome il vecchio viene conservato. Con <i>tieni al massimo N</i> e/o <i>elimina quelle più vecchie di N giorni</i> non si accumulano all'infinito (0 = nessun limite).</li>
+<li><b>Limite di spazio</b>: indica una dimensione in GB; se la cartella la supera, dopo ogni download vengono eliminati <b>definitivamente</b> i file più vecchi finché rientra nel limite. Il file appena scaricato non viene mai toccato.</li>
+<li><b>👁 Anteprima pulizia</b>: elenca che cosa verrebbe spostato o eliminato adesso (pulizia, copie vecchie, limite di spazio, cestino scaduto), senza toccare nulla.</li>
+<li><b>🧹 Pulisci ora</b>: esegue solo la pulizia, senza scaricare, dopo aver mostrato l'elenco e chiesto conferma. Si trova nello stesso riquadro e vale anche come «Solo pulizia» del task.</li>
+</ul>
+<h3>9.6 Verifica dell'integrità</h3>
 <p>Nel campo <b>Checksum SHA-256 atteso</b> puoi inserire l'impronta che il file deve avere: se il file scaricato non coincide, il download risulta fallito.</p>
 """, False),
 ("Azioni dopo il download", """
@@ -188,7 +197,13 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <p>Quasi tutto è <b>cliccabile</b>: cliccando un task si apre il suo editor, cliccando una categoria si filtra l'elenco nella barra laterale. I pulsanti <b>🧹 Pulisci</b> azzerano la vista dell'attività recente o del conteggio errori (lo storico dei task resta).</p>
 <h3>11.2 Palinsesto</h3>
 <p>Mostra tutti i task come schede: prossimo orario con conto alla rovescia, pianificazioni, ultimo download, esito degli ultimi tentativi, sorgente e destinazione. Da ogni scheda puoi <b>▶ Esegui ora</b>, aprire l'ultimo file, attivare/disattivare o modificare il task. La vista <b>Tutti i passaggi</b> elenca cronologicamente tutte le esecuzioni previste nelle prossime 24 ore o nei prossimi 7 giorni.</p>
-<h3>11.3 Categorie</h3>
+<h3>11.3 Cercare, filtrare e ordinare i task</h3>
+<p>Sopra l'elenco dei task (barra laterale) e in cima al Palinsesto c'è una <b>casella di ricerca</b> con due menu:</p>
+<ul><li><b>Cerca</b>: trova le parole che scrivi (anche più di una) nel nome, nella categoria, nell'indirizzo o percorso sorgente, nella cartella di destinazione e nelle etichette delle pianificazioni.</li>
+<li><b>Ordinamento</b>: per categoria (raggruppato, come prima), A → Z, per prossimo orario di esecuzione, per stato (prima gli errori, poi le azioni in attesa).</li>
+<li><b>Filtro</b>: tutti, attivi, disattivati, con errori, con azioni in attesa.</li></ul>
+<p>Ricerca e filtro valgono sia per la barra laterale sia per il Palinsesto; l'ordinamento si sceglie separatamente per ciascuno (predefiniti: per categoria nella barra laterale, per orario nel Palinsesto). L'ultimo ordinamento e filtro scelti vengono <b>ricordati</b> alla riapertura; il testo cercato no. La ✕ riporta alla vista completa. La barra laterale mostra «(3/12)» quando una vista nasconde dei task. Per pochi task (fino a 4) la barra degli strumenti resta nascosta.</p>
+<h3>11.4 Categorie</h3>
 <p>Ogni task può avere una categoria (testo libero). Ogni categoria riceve un <b>colore</b> assegnato automaticamente, usato nell'elenco, nel palinsesto e nelle etichette; puoi cambiarlo in <i>Impostazioni → Categorie e colori</i> e ripristinare quello automatico.</p>
 """, False),
 ("Notifiche: email e Telegram", """
@@ -218,7 +233,7 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <table><tr><th>Sezione</th><th>Contenuto</th></tr>
 <tr><td>Generali</td><td>tema chiaro/scuro · lingua · icona nella barra dei menu (bianca o blu) · formato di data e ora · avvio all'accensione del computer · avvio ridotto a icona · notifiche di successo e di errore · apertura della cartella cliccando la notifica · cartella di destinazione predefinita · tentativi e attesa predefiniti</td></tr>
 <tr><td>Affidabilità / Prestazioni</td><td>vedi capitolo 13</td></tr>
-<tr><td>Aggiornamenti</td><td>vedi capitolo 16</td></tr>
+<tr><td>Aggiornamenti</td><td>vedi capitolo 16 (compreso l'avviso via email/Telegram)</td></tr>
 <tr><td>Report e log</td><td>report email · apertura della cartella dei log</td></tr>
 <tr><td>Categorie e colori</td><td>colori delle categorie</td></tr>
 <tr><td>Email / Telegram</td><td>vedi capitolo 12</td></tr>
@@ -244,7 +259,9 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <h3>16.1 Scaricare e verificare</h3>
 <p>Cliccando <b>Scarica e installa</b> l'app individua da sola l'installer giusto per il tuo sistema e il tuo processore (Intel o Apple Silicon su Mac) e lo scarica nella cartella <b>Download</b>, mostrando percentuale e megabyte scaricati. Al termine confronta il file con lo <b>SHA-256</b> pubblicato nella release (<code>SHA256SUMS.txt</code>): se non corrisponde, il file viene <b>eliminato</b> e compare un messaggio d'errore chiaro, con il pulsante <i>Apri pagina di download</i> come ripiego.</p>
 <p>Lo stato del download (disponibile, in corso, pronto, errore) è <b>lo stesso</b> sia nella barra sia in Impostazioni: puoi avviarlo da un punto e seguirlo dall'altro. Mentre un download è in corso il pulsante <i>Controlla aggiornamenti</i> resta disattivato.</p>
-<h3>16.2 Completare l'installazione</h3>
+<h3>16.2 Avviso anche via email e Telegram</h3>
+<p>Per le macchine lasciate da sole in sala server, quando un controllo automatico trova una versione nuova l'app manda <b>un solo messaggio per versione</b> sui canali già configurati per gli errori (email e/o Telegram), con il numero della versione e il link alla release. Funziona solo se almeno uno dei due canali è attivo; si disattiva in <i>Impostazioni → Aggiornamenti</i> («Avvisami anche via email/Telegram…»). Il controllo manuale non invia messaggi.</p>
+<h3>16.3 Completare l'installazione</h3>
 <p>A verifica riuscita compare un pulsante verde, diverso per sistema:</p>
 <table><tr><th>Sistema</th><th>Pulsante</th><th>Che cosa succede</th></tr>
 <tr><td>Windows</td><td>Chiudi e installa</td><td>l'app chiude sé stessa (i download pianificati si fermano) e avvia l'installer; al termine si riapre da sola.</td></tr>

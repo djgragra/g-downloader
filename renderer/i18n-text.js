@@ -1527,6 +1527,146 @@ const UI_TEXT = {
  "Azioni": [
   "Actions",
   "Acciones"
+ ],
+ "Tutti": [
+  "All",
+  "Todos"
+ ],
+ "Attivi": [
+  "Active",
+  "Activos"
+ ],
+ "Disattivati": [
+  "Disabled",
+  "Desactivados"
+ ],
+ "Con errori": [
+  "With errors",
+  "Con errores"
+ ],
+ "Azioni in attesa": [
+  "Actions waiting",
+  "Acciones en espera"
+ ],
+ "Per categoria": [
+  "By category",
+  "Por categoría"
+ ],
+ "A → Z": [
+  "A → Z",
+  "A → Z"
+ ],
+ "Per orario": [
+  "By time",
+  "Por hora"
+ ],
+ "Per stato": [
+  "By status",
+  "Por estado"
+ ],
+ "Cerca task…": [
+  "Search tasks…",
+  "Buscar tareas…"
+ ],
+ "Ordinamento": [
+  "Sort order",
+  "Orden"
+ ],
+ "Filtro": [
+  "Filter",
+  "Filtro"
+ ],
+ "Mostra tutti i task": [
+  "Show all tasks",
+  "Mostrar todas las tareas"
+ ],
+ "Nessun task corrisponde ai filtri.": [
+  "No task matches the filters.",
+  "Ninguna tarea coincide con los filtros."
+ ],
+ "In una sottocartella _cestino che si svuota da sola (anche in rete)": [
+  "In a _cestino subfolder that empties itself (works on network folders too)",
+  "En una subcarpeta _cestino que se vacía sola (también en red)"
+ ],
+ "Giorni prima di eliminarli per sempre": [
+  "Days before deleting them for good",
+  "Días antes de eliminarlos para siempre"
+ ],
+ "A prova di errore: metti i file da parte e, se il download fallisce, rimettili al loro posto": [
+  "Fail-safe: set the files aside and, if the download fails, put them back",
+  "A prueba de errores: aparta los archivos y, si la descarga falla, devuélvelos a su sitio"
+ ],
+ "Copie vecchie (.old-…): tieni al massimo (0 = tutte)": [
+  "Old copies (.old-…): keep at most (0 = all)",
+  "Copias antiguas (.old-…): conservar como máximo (0 = todas)"
+ ],
+ "…ed elimina quelle più vecchie di N giorni (0 = mai)": [
+  "…and delete those older than N days (0 = never)",
+  "…y eliminar las de más de N días (0 = nunca)"
+ ],
+ "Limite di spazio della cartella in GB (0 = nessun limite): se superato, elimina i file più vecchi": [
+  "Folder size limit in GB (0 = no limit): when exceeded, the oldest files are deleted",
+  "Límite de espacio de la carpeta en GB (0 = sin límite): si se supera, se eliminan los archivos más antiguos"
+ ],
+ "Mostra che cosa verrebbe spostato o eliminato adesso, senza toccare nulla": [
+  "Shows what would be moved or deleted right now, without touching anything",
+  "Muestra qué se movería o eliminaría ahora, sin tocar nada"
+ ],
+ "👁 Anteprima pulizia": [
+  "👁 Cleanup preview",
+  "👁 Vista previa de la limpieza"
+ ],
+ "Esegue solo la pulizia della cartella, senza scaricare": [
+  "Runs only the folder cleanup, without downloading",
+  "Ejecuta solo la limpieza de la carpeta, sin descargar"
+ ],
+ "🧹 Pulisci ora": [
+  "🧹 Clean now",
+  "🧹 Limpiar ahora"
+ ],
+ "Avvisami anche via email/Telegram quando esce una nuova versione (una sola volta per versione)": [
+  "Also notify me by email/Telegram when a new version is out (once per version)",
+  "Avisarme también por correo/Telegram cuando salga una versión nueva (una sola vez por versión)"
+ ],
+ "Cartella: {folder}": [
+  "Folder: {folder}",
+  "Carpeta: {folder}"
+ ],
+ "Verranno spostati in {target}:": [
+  "Will be moved to {target}:",
+  "Se moverán a {target}:"
+ ],
+ "Andranno nel cestino del sistema:": [
+  "Will go to the system recycle bin:",
+  "Irán a la papelera del sistema:"
+ ],
+ "Andranno nella cartella _cestino:": [
+  "Will go to the _cestino folder:",
+  "Irán a la carpeta _cestino:"
+ ],
+ "Verranno eliminati per sempre:": [
+  "Will be deleted for good:",
+  "Se eliminarán para siempre:"
+ ],
+ "Copie vecchie da eliminare:": [
+  "Old copies to delete:",
+  "Copias antiguas por eliminar:"
+ ],
+ "Limite di spazio ({limit} GB, ora {now} MB): eliminati per sempre i più vecchi:": [
+  "Size limit ({limit} GB, now {now} MB): the oldest are deleted for good:",
+  "Límite de espacio ({limit} GB, ahora {now} MB): se eliminan para siempre los más antiguos:"
+ ],
+ "Cartelle scadute nel _cestino da svuotare:": [
+  "Expired folders in _cestino to empty:",
+  "Carpetas caducadas en _cestino por vaciar:"
+ ],
+ "Niente da fare: la cartella è già a posto.": [
+  "Nothing to do: the folder is already in order.",
+  "Nada que hacer: la carpeta ya está en orden."
+ ],
+ "Eseguire questa pulizia adesso?": [
+  "Run this cleanup now?",
+  "¿Ejecutar esta limpieza ahora?"
  ]
 };
 

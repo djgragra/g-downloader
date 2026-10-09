@@ -237,6 +237,11 @@ async function finalizePath(destFolder, tempPath, filename, log, overwrite = fal
 }
 
 // "Wildcard" patterns as typed by users: * = any run of characters, ? = one character.
+// Names the app itself creates inside the destination folder: never touched by the cleanup.
+const STAGING_PREFIX = '.gdl-staging-';
+const TRASH_DIR = '_cestino';
+const isInternalName = (name) => /\.part-\d+$/.test(name) || name.startsWith(STAGING_PREFIX) || name === TRASH_DIR;
+
 function wildcardToRegex(pattern) {
   const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
   return new RegExp(`^${escaped}$`, 'i');
@@ -257,7 +262,7 @@ async function selectCleanupEntries(task, destFolder, entries, ctx0, filename, l
   const scope = task.preDownloadScope || 'all';
   const withSub = task.preDownloadSubfolders !== false;
   let list = entries.filter(
-    (e) => (e.isFile() || (withSub && e.isDirectory())) && !/\.part-\d+$/.test(e.name) && !excludeNames.has(e.name.toLowerCase())
+    (e) => (e.isFile() || (withSub && e.isDirectory())) && !isInternalName(e.name) && !excludeNames.has(e.name.toLowerCase())
   );
 
   if (scope === 'all') {
@@ -296,49 +301,291 @@ async function selectCleanupEntries(task, destFolder, entries, ctx0, filename, l
   return list;
 }
 
-// Housekeeping on the destination folder: delete (permanently or to the recycle bin) or
-// move the selected entries. Runs either before the download or, when configured, only
-// after a successful one (then the file just saved is never touched).
-async function applyPreDownloadAction(task, destFolder, ctx0, log, filename, excludeNames = new Set()) {
-  const mode = task.preDownloadAction || 'none';
-  if (mode === 'none') return;
-  const entries = await fsp.readdir(destFolder, { withFileTypes: true }).catch(() => []);
-  if (!entries.length) return;
-  const selected = await selectCleanupEntries(task, destFolder, entries, ctx0, filename, log, excludeNames);
-  if (!selected.length) return;
+// ---- housekeeping of the destination folder -------------------------------------------
+// How an entry is removed: permanently, to the system recycle bin, or into a "_cestino"
+// subfolder that empties itself after a number of days (the system bin does not exist on
+// network folders).
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const noop = () => {};
 
-  if (mode === 'deleteAll') {
-    for (const entry of selected) {
-      const full = path.join(destFolder, entry.name);
-      if (task.preDownloadDelete === 'trash') await shell.trashItem(full);
-      else await fsp.rm(full, { recursive: true, force: true });
+async function moveToTrashFolder(destFolder, full) {
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-'); // UTC, sortable
+  const dir = path.join(destFolder, TRASH_DIR, stamp);
+  await fsp.mkdir(dir, { recursive: true });
+  const to = path.join(dir, path.basename(full));
+  await archiveExisting(to);
+  await moveOrCopy(full, to);
+}
+
+async function removeEntry(task, destFolder, full) {
+  const how = task.preDownloadDelete || 'permanent';
+  if (how === 'trash') await shell.trashItem(full);
+  else if (how === 'folder') await moveToTrashFolder(destFolder, full);
+  else await fsp.rm(full, { recursive: true, force: true });
+}
+
+// Emptying the "_cestino" folder: sub-folders named by the moment they were created.
+async function trashFolderExpired(task, destFolder) {
+  const days = Math.max(1, Number(task.preDownloadTrashDays) || 7);
+  const dirs = await fsp.readdir(path.join(destFolder, TRASH_DIR), { withFileTypes: true }).catch(() => []);
+  const out = [];
+  for (const d of dirs) {
+    const m = /^(\d{4})-(\d\d)-(\d\d)-(\d\d)-(\d\d)-(\d\d)$/.exec(d.name);
+    if (!d.isDirectory() || !m) continue;
+    const when = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+    if (Date.now() - when > days * 86_400_000) out.push(d.name);
+  }
+  return out;
+}
+
+async function purgeTrashFolder(task, destFolder, log) {
+  if ((task.preDownloadDelete || 'permanent') !== 'folder') return;
+  const expired = await trashFolderExpired(task, destFolder);
+  for (const name of expired) await fsp.rm(path.join(destFolder, TRASH_DIR, name), { recursive: true, force: true });
+  if (expired.length) log(M("Cestino della cartella: eliminate definitivamente {n} cartelle scadute.", { n: expired.length }));
+}
+
+// Older copies ("name.old-<date>.ext") of a file that was replaced: keep the last N, and/or
+// drop those older than N days. Returns the entries to remove.
+async function planOldCopies(task, dir, fileName) {
+  const keep = Math.max(0, Number(task.oldCopiesKeep) || 0);
+  const days = Math.max(0, Number(task.oldCopiesDays) || 0);
+  if ((!keep && !days) || !fileName) return [];
+  const ext = path.extname(fileName);
+  const re = new RegExp(`^${escapeRe(path.basename(fileName, ext))}\\.old-.*${escapeRe(ext)}$`);
+  const names = (await fsp.readdir(dir).catch(() => [])).filter((n) => re.test(n));
+  const withTimes = await Promise.all(names.map(async (n) => ({ n, mtime: (await fsp.stat(path.join(dir, n)).catch(() => null))?.mtimeMs ?? 0 })));
+  withTimes.sort((a, b) => b.mtime - a.mtime);
+  const cutoff = Date.now() - days * 86_400_000;
+  return withTimes.filter((x, idx) => (keep && idx >= keep) || (days && x.mtime < cutoff)).map((x) => x.n);
+}
+
+async function pruneOldCopies(task, dir, fileName, log) {
+  const names = await planOldCopies(task, dir, fileName);
+  for (const n of names) await removeEntry(task, dir, path.join(dir, n));
+  if (names.length) log(M("Copie vecchie eliminate: {n} ({names}).", { n: names.length, names: names.slice(0, 5).join(', ') + (names.length > 5 ? ', …' : '') }));
+}
+
+// Keep the folder under a size limit by dropping the oldest files. Never touches the file
+// that was just saved. Files are deleted for good (a recycle bin would not free the space).
+async function listFilesWithSize(root, withSub, rel = '') {
+  const out = [];
+  const entries = await fsp.readdir(path.join(root, rel), { withFileTypes: true }).catch(() => []);
+  for (const e of entries) {
+    if (isInternalName(e.name)) continue;
+    const r = path.join(rel, e.name);
+    if (e.isDirectory()) {
+      if (withSub) out.push(...(await listFilesWithSize(root, withSub, r)));
+    } else if (e.isFile()) {
+      const st = await fsp.stat(path.join(root, r)).catch(() => null);
+      if (st) out.push({ rel: r, size: st.size, mtime: st.mtimeMs });
     }
-    const names = selected.slice(0, 5).map((e) => e.name).join(', ') + (selected.length > 5 ? ', …' : '');
-    log(M(task.preDownloadDelete === 'trash' ? 'Pulizia cartella di destinazione: {n} elementi spostati nel cestino ({names}).' : 'Pulizia cartella di destinazione: {n} elementi eliminati ({names}).', { n: selected.length, names }));
-  } else if (mode === 'move') {
-    const targetFolder = cleanPath(resolveTemplate(task.preDownloadMoveTarget || '', ctx0));
-    if (!targetFolder) {
-      log(M("Azione pre-download \"sposta\" configurata senza percorso di destinazione: saltata."), 'warn');
-      return;
-    }
-    await fsp.mkdir(targetFolder, { recursive: true });
-    const targetResolved = path.resolve(targetFolder);
-    let moved = 0;
-    for (const entry of selected) {
-      const from = path.join(destFolder, entry.name);
-      // Skip the archive folder itself when it lives inside destFolder (e.g. "Archivio"
-      // subfolder used as the move target) — otherwise it gets moved into itself on the
-      // next run, which Node rejects with EINVAL.
-      if (path.resolve(from) === targetResolved) continue;
-      const to = path.join(targetFolder, entry.name);
-      await archiveExisting(to, log); // keep any previous archived copy instead of overwriting it
-      await moveOrCopy(from, to);
-      moved++;
-    }
-    if (moved) log(M("Spostati {n} elementi preesistenti in: {folder}", { n: moved, folder: targetFolder }));
+  }
+  return out;
+}
+
+async function planQuota(task, destFolder, protectPath = null) {
+  const limit = Math.max(0, Number(task.quotaGB) || 0) * 1024 ** 3;
+  if (!limit) return { limit: 0, total: 0, remove: [] };
+  const files = await listFilesWithSize(destFolder, task.preDownloadSubfolders !== false);
+  let total = files.reduce((s, f) => s + f.size, 0);
+  const remove = [];
+  const protectedFull = protectPath ? path.resolve(protectPath).toLowerCase() : null;
+  for (const f of files.sort((a, b) => a.mtime - b.mtime)) {
+    if (total <= limit) break;
+    if (protectedFull && path.resolve(destFolder, f.rel).toLowerCase() === protectedFull) continue;
+    remove.push(f);
+    total -= f.size;
+  }
+  return { limit, total, remove };
+}
+
+async function enforceQuota(task, destFolder, protectPath, log) {
+  const plan = await planQuota(task, destFolder, protectPath);
+  for (const f of plan.remove) await fsp.rm(path.join(destFolder, f.rel), { force: true });
+  if (plan.remove.length) {
+    const mb = Math.round(plan.remove.reduce((s, f) => s + f.size, 0) / 1048576);
+    log(M("Limite di spazio: eliminati {n} file più vecchi ({mb} MB).", { n: plan.remove.length, mb }));
   }
 }
 
+// Files set aside before the download (so they come back if it fails) wait in a hidden
+// folder inside the destination folder; they are only really removed once the new file is saved.
+const activeStaging = new Set();
+
+async function stageEntries(destFolder, selected) {
+  const dir = path.join(destFolder, `${STAGING_PREFIX}${Date.now()}`);
+  await fsp.mkdir(dir, { recursive: true });
+  activeStaging.add(dir);
+  const names = [];
+  for (const entry of selected) {
+    await moveOrCopy(path.join(destFolder, entry.name), path.join(dir, entry.name));
+    names.push(entry.name);
+  }
+  return { dir, names, destFolder };
+}
+
+async function restoreStaged(staging, log) {
+  if (!staging) return;
+  for (const name of staging.names) {
+    const from = path.join(staging.dir, name);
+    if (!(await fsp.stat(from).catch(() => null))) continue;
+    let to = path.join(staging.destFolder, name);
+    if (await fsp.stat(to).catch(() => null)) to = path.join(staging.destFolder, `${name}.restored-${Date.now()}`);
+    await moveOrCopy(from, to);
+  }
+  await fsp.rmdir(staging.dir).catch(() => {});
+  activeStaging.delete(staging.dir);
+  log(M("Download non riuscito: i file messi da parte sono stati rimessi al loro posto ({n}).", { n: staging.names.length }));
+}
+
+// A crash can leave a staging folder behind: put its files back before anything else happens.
+async function recoverStaging(destFolder, log) {
+  const dirs = (await fsp.readdir(destFolder, { withFileTypes: true }).catch(() => [])).filter(
+    (e) => e.isDirectory() && e.name.startsWith(STAGING_PREFIX) && !activeStaging.has(path.join(destFolder, e.name))
+  );
+  for (const d of dirs) {
+    const dir = path.join(destFolder, d.name);
+    const names = await fsp.readdir(dir).catch(() => []);
+    await restoreStaged({ dir, names, destFolder }, log);
+  }
+}
+
+async function commitStaged(task, staging, ctx0, log) {
+  if (!staging) return;
+  const mode = task.preDownloadAction;
+  const targetFolder = mode === 'move' ? cleanPath(resolveTemplate(task.preDownloadMoveTarget || '', ctx0)) : '';
+  if (targetFolder) await fsp.mkdir(targetFolder, { recursive: true });
+  try {
+    for (const name of staging.names) {
+      const from = path.join(staging.dir, name);
+      if (!(await fsp.stat(from).catch(() => null))) continue;
+      if (mode === 'move' && targetFolder) {
+        const to = path.join(targetFolder, name);
+        await archiveExisting(to, log);
+        await moveOrCopy(from, to);
+        await pruneOldCopies(task, targetFolder, name, log);
+      } else {
+        await removeEntry(task, staging.destFolder, from);
+      }
+    }
+    await fsp.rm(staging.dir, { recursive: true, force: true });
+    log(M("Pulizia completata dopo il download: {n} elementi.", { n: staging.names.length }));
+  } finally {
+    activeStaging.delete(staging.dir);
+  }
+}
+
+// Housekeeping on the destination folder: delete (permanently, to the recycle bin or to the
+// "_cestino" folder) or move the selected entries. Runs either before the download or, when
+// configured, only after a successful one (then the file just saved is never touched).
+// With options.stage the entries are only set aside and handed back in the result, so the
+// caller can restore them (download failed) or finish the job (download saved).
+async function applyPreDownloadAction(task, destFolder, ctx0, log, filename, excludeNames = new Set(), options = {}) {
+  await recoverStaging(destFolder, log);
+  await purgeTrashFolder(task, destFolder, log);
+  const mode = task.preDownloadAction || 'none';
+  if (mode === 'none') return null;
+  const entries = await fsp.readdir(destFolder, { withFileTypes: true }).catch(() => []);
+  if (!entries.length) return null;
+  const selected = await selectCleanupEntries(task, destFolder, entries, ctx0, filename, log, excludeNames);
+  if (!selected.length) return null;
+
+  if (mode === 'move') {
+    const targetFolder = cleanPath(resolveTemplate(task.preDownloadMoveTarget || '', ctx0));
+    if (!targetFolder) {
+      log(M("Azione pre-download \"sposta\" configurata senza percorso di destinazione: saltata."), 'warn');
+      return null;
+    }
+    // Skip the archive folder itself when it lives inside destFolder (e.g. "Archivio"
+    // subfolder used as the move target) — otherwise it gets moved into itself on the
+    // next run, which Node rejects with EINVAL.
+    const targetResolved = path.resolve(targetFolder);
+    const movable = selected.filter((e) => path.resolve(path.join(destFolder, e.name)) !== targetResolved);
+    if (options.stage) {
+      const staging = await stageEntries(destFolder, movable);
+      log(M("Messi da parte {n} elementi: verranno spostati solo se il download riesce.", { n: movable.length }));
+      return { staging };
+    }
+    await fsp.mkdir(targetFolder, { recursive: true });
+    let moved = 0;
+    for (const entry of movable) {
+      const to = path.join(targetFolder, entry.name);
+      await archiveExisting(to, log); // keep any previous archived copy instead of overwriting it
+      await moveOrCopy(path.join(destFolder, entry.name), to);
+      await pruneOldCopies(task, targetFolder, entry.name, log);
+      moved++;
+    }
+    if (moved) log(M("Spostati {n} elementi preesistenti in: {folder}", { n: moved, folder: targetFolder }));
+    return null;
+  }
+
+  if (options.stage) {
+    const staging = await stageEntries(destFolder, selected);
+    log(M("Messi da parte {n} elementi: verranno eliminati solo se il download riesce.", { n: selected.length }));
+    return { staging };
+  }
+  for (const entry of selected) await removeEntry(task, destFolder, path.join(destFolder, entry.name));
+  const names = selected.slice(0, 5).map((e) => e.name).join(', ') + (selected.length > 5 ? ', …' : '');
+  const how = task.preDownloadDelete || 'permanent';
+  log(M(how === 'trash' ? 'Pulizia cartella di destinazione: {n} elementi spostati nel cestino ({names}).' : how === 'folder' ? 'Pulizia cartella di destinazione: {n} elementi spostati nella cartella _cestino ({names}).' : 'Pulizia cartella di destinazione: {n} elementi eliminati ({names}).', { n: selected.length, names }));
+  return null;
+}
+
+// What a cleanup would do right now, without doing it (for the preview and "Clean now").
+async function planCleanup(task, ctx0) {
+  const settings = getSettings();
+  const destFolder = cleanPath(task.destinationFolder || settings.defaultDestination || process.cwd());
+  const filename = expectedFileName(task, ctx0);
+  const plan = { folder: destFolder, action: task.preDownloadAction || 'none', how: task.preDownloadDelete || 'permanent', target: '', items: [], oldCopies: [], quota: null, trashExpired: [] };
+  if (!(await fsp.stat(destFolder).catch(() => null))) return plan;
+  if (plan.action !== 'none') {
+    const entries = await fsp.readdir(destFolder, { withFileTypes: true }).catch(() => []);
+    const selected = await selectCleanupEntries(task, destFolder, entries, ctx0, filename, noop, new Set());
+    if (plan.action === 'move') plan.target = cleanPath(resolveTemplate(task.preDownloadMoveTarget || '', ctx0));
+    const targetResolved = plan.target ? path.resolve(plan.target) : null;
+    plan.items = selected.filter((e) => path.resolve(path.join(destFolder, e.name)) !== targetResolved).map((e) => e.name + (e.isDirectory() ? '/' : ''));
+  }
+  if (filename) plan.oldCopies = await planOldCopies(task, destFolder, filename);
+  const quota = await planQuota(task, destFolder);
+  if (quota.limit) plan.quota = { limitGB: Number(task.quotaGB), totalMB: Math.round(quota.total / 1048576), remove: quota.remove.map((f) => f.rel) };
+  if ((task.preDownloadDelete || 'permanent') === 'folder') plan.trashExpired = await trashFolderExpired(task, destFolder);
+  return plan;
+}
+
+export async function previewCleanup(taskId, opts = {}) {
+  const task = getTask(taskId);
+  if (!task) return { ok: false };
+  const now = opts.scheduledAt ? new Date(opts.scheduledAt) : new Date();
+  return { ok: true, ...(await planCleanup(task, { now, seq: task.seqCounter || 0 })) };
+}
+
+async function runCleanupOnly(taskId, opts) {
+  const task = getTask(taskId);
+  if (!task) throw new Error(M("Task non trovato"));
+  const now = opts.scheduledAt ? new Date(opts.scheduledAt) : new Date();
+  const ctx0 = { now, seq: task.seqCounter || 0 };
+  const settings = getSettings();
+  const destFolder = cleanPath(task.destinationFolder || settings.defaultDestination || process.cwd());
+  const startedAt = new Date().toISOString();
+  events.emit('task-started', { taskId });
+  const emitLog = (msg, level) => log(taskId, msg, level);
+  try {
+    emitLog(M("Pulizia manuale della cartella: {folder}", { folder: destFolder }));
+    const filename = expectedFileName(task, ctx0);
+    await applyPreDownloadAction(task, destFolder, ctx0, emitLog, filename);
+    if (filename) await pruneOldCopies(task, destFolder, filename, emitLog);
+    await enforceQuota(task, destFolder, null, emitLog);
+    appendHistory(taskId, { startedAt, finishedAt: new Date().toISOString(), status: 'success', mode: 'cleanup' });
+    events.emit('task-finished', { taskId, status: 'success' });
+    return { status: 'success', mode: 'cleanup' };
+  } catch (err) {
+    emitLog(`Errore: ${err.message}`, 'error');
+    appendHistory(taskId, { startedAt, finishedAt: new Date().toISOString(), status: 'error', mode: 'cleanup', error: err.message });
+    events.emit('task-finished', { taskId, status: 'error', error: err.message });
+    throw err;
+  }
+}
 
 // opts.schedule: the schedule that fired this run. Its optional urlOverride replaces the
 // task URL for that run only (same product, different source per time slot / weekday).
@@ -378,6 +625,7 @@ export async function runTask(taskId, opts = {}) {
   const actionsOnly = opts.mode === 'actions';
   try {
     if (actionsOnly) return await runActionsOnly(taskId, opts);
+    if (opts.mode === 'cleanup') return await runCleanupOnly(taskId, opts);
     await acquireSlot(taskId);
     try {
       return await runTaskInner(taskId, opts);
@@ -387,6 +635,20 @@ export async function runTask(taskId, opts = {}) {
   } finally {
     activeRuns.delete(taskId);
   }
+}
+
+// The file name a download of this task would get for this occurrence (null: unknown, e.g. "ask").
+function expectedFileName(task, ctx0) {
+  if (task.filenameMode === 'fixed') return resolveTemplate(task.fixedFilename, ctx0);
+  if (task.filenameMode === 'template') return resolveTemplate(task.filenameTemplate, ctx0);
+  if (task.filenameMode === 'fromUrl') {
+    return safeFileName(
+      task.sourceType === 'local'
+        ? path.basename(cleanPath(resolveTemplate(task.localPath, ctx0)))
+        : filenameFromUrl(resolveTemplate(task.url, ctx0))
+    );
+  }
+  return null;
 }
 
 function codedError(code, message) {
@@ -416,21 +678,12 @@ async function resolveActionsFile(task, settings, ctx0, opts) {
   if (task.pendingActions?.filepath) candidates.push({ p: task.pendingActions.filepath, source: 'pending' });
   try {
     const destFolder = cleanPath(task.destinationFolder || settings.defaultDestination || process.cwd());
-    let filename = null;
-    if (task.filenameMode === 'fixed') filename = resolveTemplate(task.fixedFilename, ctx0);
-    else if (task.filenameMode === 'template') filename = resolveTemplate(task.filenameTemplate, ctx0);
-    else if (task.filenameMode === 'fromUrl') {
-      filename = safeFileName(
-        task.sourceType === 'local'
-          ? path.basename(cleanPath(resolveTemplate(task.localPath, ctx0)))
-          : filenameFromUrl(resolveTemplate(task.url, ctx0))
-      );
-    }
+    const filename = expectedFileName(task, ctx0);
     if (filename) candidates.push({ p: path.join(destFolder, filename), source: 'expected' });
   } catch {
     /* name not computable: fall through to the history */
   }
-  const lastDownload = (task.history || []).find((h) => h.status === 'success' && h.mode !== 'actions' && h.filepath);
+  const lastDownload = (task.history || []).find((h) => h.status === 'success' && h.mode !== 'actions' && h.mode !== 'cleanup' && h.filepath);
   if (lastDownload) candidates.push({ p: lastDownload.filepath, source: 'last' });
   for (const c of candidates) if (await isFile(c.p)) return { filepath: c.p, source: c.source };
   throw codedError('no-file', M("Nessun file trovato su cui eseguire le azioni: scegline uno."));
@@ -517,6 +770,7 @@ async function runTaskInner(taskId, opts = {}) {
   const now = opts.scheduledAt ? new Date(opts.scheduledAt) : new Date();
   const ctx0 = { now, seq };
   let tempPath = null;
+  let staged = null; // files set aside before the download, restored if it fails
 
   try {
     const isLocal = task.sourceType === 'local';
@@ -537,7 +791,10 @@ async function runTaskInner(taskId, opts = {}) {
     }
 
     const cleanupAfter = task.preDownloadTiming === 'afterSuccess';
-    if (!cleanupAfter) await applyPreDownloadAction(task, destFolder, ctx0, emitLog, filename);
+    if (!cleanupAfter) {
+      const r = await applyPreDownloadAction(task, destFolder, ctx0, emitLog, filename, new Set(), { stage: !!task.preDownloadSafe });
+      staged = r?.staging || null;
+    }
 
     emitLog(isLocal ? M("Recupero file locale: {url}", { url: resolvedUrl }) : M("Avvio download: {url}", { url: resolvedUrl }));
     tempPath = path.join(destFolder, `.${filename}.part-${Date.now()}`);
@@ -576,10 +833,18 @@ async function runTaskInner(taskId, opts = {}) {
       finalPath = await finalizePath(destFolder, tempPath, filename, emitLog, task.existingFile === 'overwrite');
     }
     emitLog(M("File salvato: {path}", { path: finalPath }));
+    if (staged) {
+      const s = staged;
+      staged = null; // the download is saved: from here on nothing is restored
+      await commitStaged(task, s, ctx0, emitLog);
+    }
     if (cleanupAfter) {
       const savedName = path.basename(finalPath);
       await applyPreDownloadAction(task, path.dirname(finalPath), ctx0, emitLog, savedName, new Set([savedName.toLowerCase()]));
     }
+    // housekeeping that follows every saved file: old copies, then the size limit
+    await pruneOldCopies(task, path.dirname(finalPath), path.basename(finalPath), emitLog);
+    await enforceQuota(task, path.dirname(finalPath), finalPath, emitLog);
 
     const staleLimit = Math.max(0, Number(settings.staleAlertRuns) || 0);
     if (settings.warnIfUnchanged || staleLimit > 0) {
@@ -647,6 +912,7 @@ async function runTaskInner(taskId, opts = {}) {
       error: err.message
     });
     if (tempPath) await fsp.unlink(tempPath).catch(() => {});
+    if (staged) await restoreStaged(staged, emitLog).catch((e) => emitLog(`Errore nel ripristino: ${e.message}`, 'error'));
     if (settings.notifyOnError && Notification.isSupported()) {
       new Notification({ title: M("Errore: {name}", { name: task.name }), body: err.message }).show();
     }

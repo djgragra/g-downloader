@@ -221,6 +221,14 @@ const GUIDE_CONTENT = {
         p: 'Nell\'editor di un task <b>⬇ Solo download</b> scarica il file senza lanciare le azioni successive; <b>⚙ Solo azioni</b> esegue le azioni sul file già presente, senza scaricare (utile se hai ricevuto il file in un altro modo). Ogni azione ha anche il suo pulsante <b>▶ Esegui</b>, che la lancia da sola anche se è disattivata. Se il file non si trova, l\'app ti chiede di sceglierlo; <b>📂 Azioni su un altro file…</b> le applica a un file qualsiasi. <b>👁 Anteprima</b> su un\'azione mostra i comandi con i segnaposto già sostituiti, senza eseguirli. In ogni pianificazione, <b>Dopo il download</b> permette di non eseguire le azioni oppure di aspettare la tua conferma (con avviso email/Telegram): il task mostra "Azioni in attesa" e <b>▶ Esegui azioni ora</b>.'
       },
       {
+        h: 'Pulizia della cartella',
+        p: 'Prima del download la pulizia può spostare o eliminare i file in base a una regola. In più: <b>a prova di errore</b> (i file vengono messi da parte e rimessi al loro posto se il download fallisce), <b>cestino a scadenza</b> (sottocartella <code>_cestino</code> anche in rete), tetto alle <b>copie vecchie</b> <code>.old-…</code> e <b>limite di spazio</b> della cartella. <b>👁 Anteprima pulizia</b> mostra che cosa succederebbe; <b>🧹 Pulisci ora</b> esegue solo la pulizia, senza scaricare.'
+      },
+      {
+        h: 'Cercare e filtrare i task',
+        p: 'Sopra l\'elenco dei task e nel Palinsesto trovi la ricerca e i menu per ordinare (categoria, A → Z, orario, stato) e filtrare (attivi, disattivati, con errori, azioni in attesa). L\'ultima scelta viene ricordata.'
+      },
+      {
         h: 'Primo avvio (app non firmata)',
         p: 'L\'app è gratuita e non è firmata digitalmente. <b>macOS:</b> se compare "app danneggiata" o non si apre, clic destro → Apri, oppure nel Terminale: <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>. <b>Windows:</b> se compare SmartScreen, clicca "Ulteriori informazioni" → "Esegui comunque".'
       },
@@ -271,6 +279,14 @@ const GUIDE_CONTENT = {
         p: 'In a task\'s editor <b>⬇ Download only</b> fetches the file without running the actions that follow; <b>⚙ Actions only</b> runs the actions on the file already there, without downloading (handy if you got the file another way). Each action also has its own <b>▶ Run</b> button, which runs it alone even if it is switched off. If the file cannot be found, the app asks you to pick it; <b>📂 Actions on another file…</b> applies them to any file. <b>👁 Preview</b> on an action shows the commands with the placeholders already filled in, without running them. In each schedule, <b>After the download</b> lets you skip the actions or wait for your confirmation (with an email/Telegram notice): the task then shows "Actions waiting" and <b>▶ Run actions now</b>.'
       },
       {
+        h: 'Folder cleanup',
+        p: 'Before the download the cleanup can move or delete files according to a rule. Besides that: <b>fail-safe</b> (files are set aside and put back if the download fails), <b>bin with expiry</b> (a <code>_cestino</code> subfolder, also on network folders), a cap on the <code>.old-…</code> <b>old copies</b> and a folder <b>size limit</b>. <b>👁 Cleanup preview</b> shows what would happen; <b>🧹 Clean now</b> runs only the cleanup, without downloading.'
+      },
+      {
+        h: 'Searching and filtering tasks',
+        p: 'Above the task list and in the Schedule you find the search box and the menus to sort (category, A → Z, time, status) and filter (active, disabled, with errors, actions waiting). The last choice is remembered.'
+      },
+      {
         h: 'First launch (unsigned app)',
         p: 'The app is free and not code-signed. <b>macOS:</b> if it says the app is damaged or cannot be opened, right-click it → Open, or run <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code> in Terminal. <b>Windows:</b> if SmartScreen appears, click "More info" → "Run anyway".'
       },
@@ -319,6 +335,14 @@ const GUIDE_CONTENT = {
       {
         h: 'Ejecutar solo una parte',
         p: 'En el editor de una tarea, <b>⬇ Solo descarga</b> baja el archivo sin ejecutar las acciones posteriores; <b>⚙ Solo acciones</b> ejecuta las acciones sobre el archivo ya presente, sin descargar (útil si recibiste el archivo de otra forma). Cada acción tiene también su botón <b>▶ Ejecutar</b>, que la lanza sola aunque esté desactivada. Si no se encuentra el archivo, la app te pide que lo elijas; <b>📂 Acciones sobre otro archivo…</b> las aplica a cualquier archivo. <b>👁 Vista previa</b> en una acción muestra los comandos con los marcadores ya sustituidos, sin ejecutarlos. En cada programación, <b>Después de la descarga</b> permite no ejecutar las acciones o esperar tu confirmación (con aviso por correo/Telegram): la tarea muestra entonces "Acciones en espera" y <b>▶ Ejecutar acciones ahora</b>.'
+      },
+      {
+        h: 'Limpieza de la carpeta',
+        p: 'Antes de la descarga la limpieza puede mover o eliminar archivos según una regla. Además: <b>a prueba de errores</b> (los archivos se apartan y se devuelven a su sitio si la descarga falla), <b>papelera con caducidad</b> (subcarpeta <code>_cestino</code>, también en red), tope a las <b>copias antiguas</b> <code>.old-…</code> y <b>límite de espacio</b> de la carpeta. <b>👁 Vista previa de la limpieza</b> muestra qué pasaría; <b>🧹 Limpiar ahora</b> ejecuta solo la limpieza, sin descargar.'
+      },
+      {
+        h: 'Buscar y filtrar tareas',
+        p: 'Sobre la lista de tareas y en la Programación están el buscador y los menús para ordenar (categoría, A → Z, hora, estado) y filtrar (activas, desactivadas, con errores, acciones en espera). Se recuerda la última elección.'
       },
       {
         h: 'Primer inicio (app sin firmar)',

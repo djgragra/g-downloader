@@ -141,10 +141,19 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <tr><td>Action</td><td>Do nothing · Delete files · Move the files elsewhere</td></tr>
 <tr><td>Which files</td><td>everything in the folder · only the file with the same name · only files matching a pattern (e.g. <code>report_*.mp3; *.tmp</code>) · only files older than N days/hours · all except the N most recent</td></tr>
 <tr><td>Subfolders</td><td>include them, or touch only files</td></tr>
-<tr><td>How to delete</td><td>permanently or to the trash (does not work on network folders)</td></tr>
+<tr><td>How to delete</td><td>permanently · to the system recycle bin (does not work on network folders) · into a <code>_cestino</code> subfolder that empties itself after N days (works on network folders too)</td></tr>
 <tr><td>When</td><td>before downloading · or only after a successful download</td></tr></table>
 <div class="warn"><b>Warning:</b> with "Delete files" and "Everything in the folder", <b>all</b> files in the folder are deleted, even those not downloaded by this task. If the folder is shared with other tasks or programs choose "only the file with the same name" or a pattern. With "Before downloading", if the download then fails the deleted files do not come back: to delete only after a successful download choose "Only after a successful download". The app refuses in any case to empty the root of a drive.</div>
-<h3>9.5 Integrity check</h3>
+<h3>9.5 Folder safety and upkeep</h3>
+<ul>
+<li><b>Fail-safe</b> (with "Before downloading"): the files to delete or move are first <i>set aside</i> in a hidden folder. If the download succeeds, the cleanup is completed; if it fails, the files go back where they were. If the app is interrupted halfway, it puts them back by itself on the next launch.</li>
+<li><b>Bin with expiry</b>: with "Into a <code>_cestino</code> subfolder" deleted files end up in <code>_cestino/date-time</code> inside the destination folder and are erased for good after the chosen number of days. The <code>_cestino</code> folder is never touched by the cleanup.</li>
+<li><b>Old copies</b> (<code>name.old-date.ext</code>): when a new file replaces one with the same name the old one is kept. With <i>keep at most N</i> and/or <i>delete those older than N days</i> they do not pile up forever (0 = no limit).</li>
+<li><b>Size limit</b>: enter a size in GB; if the folder exceeds it, after each download the oldest files are deleted <b>for good</b> until it fits. The file just downloaded is never touched.</li>
+<li><b>👁 Cleanup preview</b>: lists what would be moved or deleted right now (cleanup, old copies, size limit, expired bin), without touching anything.</li>
+<li><b>🧹 Clean now</b>: runs only the cleanup, without downloading, after showing the list and asking for confirmation. It sits in the same box and works as the task's "Cleanup only".</li>
+</ul>
+<h3>9.6 Integrity check</h3>
 <p>In the <b>Expected SHA-256 checksum</b> field you can enter the checksum the file must have: if the downloaded file does not match, the download counts as failed.</p>
 """, False),
 ("Actions after the download", """
@@ -188,7 +197,13 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <p>Almost everything is <b>clickable</b>: click a task to open its editor, click a category to filter the list in the sidebar. The <b>🧹 Clear</b> buttons reset the view of recent activity or of the error count (task history is kept).</p>
 <h3>11.2 Schedule</h3>
 <p>Shows all tasks as cards: next time with countdown, schedules, last download, result of the latest attempts, source and destination. From each card you can <b>▶ Run now</b>, open the last file, enable/disable or edit the task. The <b>All runs</b> view lists chronologically every run planned in the next 24 hours or 7 days.</p>
-<h3>11.3 Categories</h3>
+<h3>11.3 Searching, filtering and sorting tasks</h3>
+<p>Above the task list (sidebar) and at the top of the Schedule there is a <b>search box</b> with two menus:</p>
+<ul><li><b>Search</b>: finds the words you type (more than one is fine) in the name, the category, the source address or path, the destination folder and the schedule labels.</li>
+<li><b>Sort order</b>: by category (grouped, as before), A → Z, by next run time, by status (errors first, then actions waiting).</li>
+<li><b>Filter</b>: all, active, disabled, with errors, with actions waiting.</li></ul>
+<p>Search and filter apply to both the sidebar and the Schedule; the sort order is chosen separately for each (defaults: by category in the sidebar, by time in the Schedule). The last sort order and filter are <b>remembered</b> when you reopen the app; the search text is not. The ✕ goes back to the full view. The sidebar shows "(3/12)" when a view hides some tasks. With few tasks (up to 4) the toolbar stays hidden.</p>
+<h3>11.4 Categories</h3>
 <p>Each task can have a category (free text). Each category gets an automatically assigned <b>colour</b>, used in the list, the schedule and the labels; you can change it in <i>Settings → Categories and colours</i> and restore the automatic one.</p>
 """, False),
 ("Notifications: email and Telegram", """
@@ -218,7 +233,7 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <table><tr><th>Section</th><th>Content</th></tr>
 <tr><td>General</td><td>light/dark theme · language · menu-bar icon (white or blue) · date and time format · start when the computer starts · start minimized · success and error notifications · open the folder when clicking the notification · default destination folder · default retries and wait</td></tr>
 <tr><td>Reliability / Performance</td><td>see chapter 13</td></tr>
-<tr><td>Updates</td><td>see chapter 16</td></tr>
+<tr><td>Updates</td><td>see chapter 16 (including the email/Telegram notice)</td></tr>
 <tr><td>Reports and logs</td><td>email report · open the log folder</td></tr>
 <tr><td>Categories and colours</td><td>category colours</td></tr>
 <tr><td>Email / Telegram</td><td>see chapter 12</td></tr>
@@ -244,7 +259,9 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <h3>16.1 Downloading and verifying</h3>
 <p>Clicking <b>Download and install</b> makes the app work out the right installer for your system and processor (Intel or Apple Silicon on Mac) by itself and download it to the <b>Downloads</b> folder, showing the percentage and megabytes received. When it finishes it compares the file against the <b>SHA-256</b> published in the release (<code>SHA256SUMS.txt</code>): if it does not match, the file is <b>deleted</b> and a clear error message appears, with the <i>Open download page</i> button as a fallback.</p>
 <p>The download's state (available, in progress, ready, error) is <b>the same</b> in the bar and in Settings: you can start it from one place and follow it from the other. While a download is running, the <i>Check for updates</i> button stays disabled.</p>
-<h3>16.2 Finishing the installation</h3>
+<h3>16.2 Notice by email and Telegram too</h3>
+<p>For machines left alone in a machine room, when an automatic check finds a new version the app sends <b>one message per version</b> through the channels already set up for failures (email and/or Telegram), with the version number and the release link. It only works if at least one of the two channels is on; it can be switched off in <i>Settings → Updates</i> ("Also notify me by email/Telegram…"). The manual check never sends messages.</p>
+<h3>16.3 Finishing the installation</h3>
 <p>Once verified, a green button appears, different per system:</p>
 <table><tr><th>System</th><th>Button</th><th>What happens</th></tr>
 <tr><td>Windows</td><td>Close and install</td><td>the app closes itself (scheduled downloads stop) and starts the installer; it reopens by itself when done.</td></tr>

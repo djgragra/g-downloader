@@ -983,3 +983,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+.task-toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px 0; align-items: center; }
+.task-toolbar .view-search { flex: 1 1 100%; }
+.task-toolbar .view-select { flex: 1 1 0; min-width: 0; }
+.view-search, .view-select { font-size: 12px; padding: 5px 8px; }
+.page-view { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-left: auto; }
+.page-view .view-search { width: 200px; }

@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('api', {
     runNow: (id, edition) => ipcRenderer.invoke('tasks:run-now', id, edition),
     actionsStatus: (id) => ipcRenderer.invoke('tasks:actions-status', id),
     previewAction: (id, action) => ipcRenderer.invoke('tasks:preview-action', id, action),
+    previewCleanup: (id) => ipcRenderer.invoke('tasks:preview-cleanup', id),
     recentOccurrences: (id) => ipcRenderer.invoke('tasks:recent-occurrences', id),
     exportOne: (id) => ipcRenderer.invoke('task:export', id),
     importOne: () => ipcRenderer.invoke('task:import')

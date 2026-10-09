@@ -30,6 +30,8 @@ const store = new Store({
       staleAlertRuns: 0, // 0 = off; otherwise alert after N consecutive identical downloads
       maxParallelDownloads: 0, // 0 = unlimited; 1 = one download at a time
       checkUpdates: true,
+      notifyNewVersion: true, // one email/Telegram message per new version (only if one of them is on)
+      lastNotifiedVersion: '',
       updateRepo: 'djgragra/g-downloader',
       watchdogMissedSchedules: false,
       reportFrequency: 'off', // 'off' | 'daily' | 'weekly'
@@ -270,7 +272,7 @@ function recordStat(taskId, entry) {
 export function appendHistory(id, entry) {
   const task = getTask(id);
   if (!task) return;
-  if (entry.mode !== 'actions') recordStat(id, entry); // actions-only runs are not downloads
+  if (entry.mode !== 'actions' && entry.mode !== 'cleanup') recordStat(id, entry); // only downloads count
   task.history = [entry, ...(task.history || [])].slice(0, 50);
   task.lastRun = entry.finishedAt;
   task.lastStatus = entry.status;

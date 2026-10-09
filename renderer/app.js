@@ -9,7 +9,9 @@ const state = {
   logsByTask: {},
   queue: [], // upcoming schedule fires, time-sorted
   activeDownloads: {}, // taskId -> { name, pct, received, total }
-  categoryFilter: null // set from the dashboard "by category" card, filters the sidebar task list
+  categoryFilter: null, // set from the dashboard "by category" card, filters the sidebar task list
+  // search / filter / sort of the task lists; sort and filter are remembered between sessions
+  view: { search: '', filter: 'all', sortSide: 'category', sortPage: 'next' }
 };
 
 let lastFocusedTemplateInput = null;
@@ -395,6 +397,114 @@ function statusClass(task) {
   return 'status-idle';
 }
 
+// ---------- search, filter and sort of the task lists ----------
+const VIEW_FILTERS = ['all', 'active', 'disabled', 'errors', 'waiting'];
+const VIEW_SORTS = ['category', 'name', 'next', 'status'];
+
+function viewLabel(kind, key) {
+  const labels = {
+    filter: { all: L('Tutti'), active: L('Attivi'), disabled: L('Disattivati'), errors: L('Con errori'), waiting: L('Azioni in attesa') },
+    sort: { category: L('Per categoria'), name: L('A → Z'), next: L('Per orario'), status: L('Per stato') }
+  };
+  return labels[kind][key];
+}
+
+function taskMatchesView(t) {
+  const { filter, search } = state.view;
+  if (filter === 'active' && !t.enabled) return false;
+  if (filter === 'disabled' && t.enabled) return false;
+  if (filter === 'errors' && t.lastStatus !== 'error') return false;
+  if (filter === 'waiting' && !t.pendingActions) return false;
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const hay = [t.name, t.category, t.url, t.localPath, t.destinationFolder, ...(t.schedules || []).map((s) => s.label)].join('\n').toLowerCase();
+  return words.every((w) => hay.includes(w));
+}
+
+function sortTasks(list, how) {
+  const byName = (a, b) => a.name.localeCompare(b.name);
+  const nextOf = (t) => (t.enabled && t.nextRun ? new Date(t.nextRun).getTime() : Infinity);
+  const rank = (t) => (t.lastStatus === 'error' ? 0 : t.pendingActions ? 1 : !t.enabled ? 3 : 2);
+  const cmp = {
+    name: byName,
+    category: (a, b) => (a.category || '\uffff').localeCompare(b.category || '\uffff') || byName(a, b),
+    next: (a, b) => (nextOf(a) === nextOf(b) ? byName(a, b) : nextOf(a) - nextOf(b)),
+    status: (a, b) => rank(a) - rank(b) || byName(a, b)
+  }[how] || byName;
+  return [...list].sort(cmp);
+}
+
+const viewIsActive = () => state.view.search.trim() !== '' || state.view.filter !== 'all';
+
+function persistView() {
+  const { filter, sortSide, sortPage } = state.view;
+  window.api.settings.update({ taskView: { filter, sortSide, sortPage } }).then((s) => (state.settings = s));
+}
+
+function loadView() {
+  const v = state.settings?.taskView || {};
+  if (VIEW_FILTERS.includes(v.filter)) state.view.filter = v.filter;
+  if (VIEW_SORTS.includes(v.sortSide)) state.view.sortSide = v.sortSide;
+  if (VIEW_SORTS.includes(v.sortPage)) state.view.sortPage = v.sortPage;
+}
+
+function viewControls(sortKey, ids) {
+  const opt = (kind, keys, cur) => keys.map((k) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${escapeHtml(viewLabel(kind, k))}</option>`).join('');
+  return `
+    <input type="search" id="${ids.search}" class="view-search" placeholder="${escapeHtml(L('Cerca task…'))}" value="${escapeHtml(state.view.search)}" />
+    <select id="${ids.sort}" class="view-select" title="${escapeHtml(L('Ordinamento'))}">${opt('sort', VIEW_SORTS, state.view[sortKey])}</select>
+    <select id="${ids.filter}" class="view-select" title="${escapeHtml(L('Filtro'))}">${opt('filter', VIEW_FILTERS, state.view.filter)}</select>
+    <button type="button" class="btn btn-xs btn-ghost" id="${ids.reset}" style="${viewIsActive() ? '' : 'display:none'}" title="${escapeHtml(L('Mostra tutti i task'))}">✕</button>`;
+}
+
+// Wires the search / sort / filter controls; onChange(refocusSearch) redraws what depends on them.
+function bindViewControls(sortKey, ids, onChange) {
+  const search = document.getElementById(ids.search);
+  search.addEventListener('input', () => {
+    state.view.search = search.value;
+    onChange(true);
+  });
+  document.getElementById(ids.sort).addEventListener('change', (e) => {
+    state.view[sortKey] = e.target.value;
+    persistView();
+    onChange(false);
+  });
+  document.getElementById(ids.filter).addEventListener('change', (e) => {
+    state.view.filter = e.target.value;
+    persistView();
+    onChange(false);
+  });
+  document.getElementById(ids.reset)?.addEventListener('click', () => {
+    state.view.search = '';
+    state.view.filter = 'all';
+    persistView();
+    onChange(false);
+  });
+}
+
+// Built once per language (so typing is never interrupted), then only brought up to date.
+function renderSidebarToolbar() {
+  const box = document.getElementById('task-toolbar');
+  if (!box) return;
+  const ids = { search: 'task-search', sort: 'task-sort', filter: 'task-filter', reset: 'task-view-reset' };
+  const lang = state.settings?.language || 'it';
+  if (box.dataset.lang !== lang) {
+    box.dataset.lang = lang;
+    box.innerHTML = viewControls('sortSide', ids);
+    bindViewControls('sortSide', ids, () => {
+      renderSidebar();
+      if (state.mode === 'tasks') renderTasksPage();
+    });
+  } else {
+    const search = document.getElementById(ids.search);
+    if (document.activeElement !== search) search.value = state.view.search;
+    document.getElementById(ids.sort).value = state.view.sortSide;
+    document.getElementById(ids.filter).value = state.view.filter;
+    document.getElementById(ids.reset).style.display = viewIsActive() ? '' : 'none';
+  }
+  box.style.display = state.tasks.length > 4 || viewIsActive() ? '' : 'none'; // not worth it for a handful of tasks
+}
+
 function groupTasksByCategory(tasks) {
   const groups = new Map();
   for (const task of tasks) {
@@ -443,15 +553,25 @@ function renderSidebar() {
     header.textContent = tr('task');
   }
 
+  renderSidebarToolbar();
   if (!state.tasks.length) {
     list.innerHTML = `<div class="hint" style="padding:10px">${escapeHtml(tr('noTasks'))}</div>`;
     return;
   }
-  const visibleTasks = state.categoryFilter
+  const inCategory = state.categoryFilter
     ? state.tasks.filter((x) => (x.category || tr('uncategorized')) === state.categoryFilter)
     : state.tasks;
+  const visibleTasks = sortTasks(inCategory.filter(taskMatchesView), state.view.sortSide);
+  if (viewIsActive() || state.categoryFilter) {
+    const h = document.getElementById('task-list-header');
+    h.firstChild.textContent = `${tr('task')} (${visibleTasks.length}/${state.tasks.length}) `;
+  }
+  if (!visibleTasks.length) {
+    list.innerHTML = `<div class="hint" style="padding:10px">${escapeHtml(L('Nessun task corrisponde ai filtri.'))}</div>`;
+    return;
+  }
   const groups = groupTasksByCategory(visibleTasks);
-  if (groups.length === 1 && groups[0].name === tr('uncategorized')) {
+  if (state.view.sortSide !== 'category' || (groups.length === 1 && groups[0].name === tr('uncategorized'))) {
     list.innerHTML = visibleTasks.map(renderTaskItem).join('');
   } else {
     list.innerHTML = groups
@@ -1121,7 +1241,7 @@ function renderEditor() {
       </div>` : ''}
 
     ${(() => {
-      const last = (t.history || []).find((h) => h.mode !== 'actions');
+      const last = (t.history || []).find((h) => h.mode !== 'actions' && h.mode !== 'cleanup');
       if (!last || last.status !== 'success' || !last.filepath) return '';
       const isAudio = AUDIO_EXTENSIONS.some((ext) => last.filepath.toLowerCase().endsWith(ext));
       return `<div class="card">
@@ -1299,11 +1419,13 @@ function renderEditor() {
         preDownloadAction === 'deleteAll'
           ? `<div class="field span-2">
               <label>${L("Come eliminare")}</label>
-              <select data-bind="preDownloadDelete">
+              <select data-bind="preDownloadDelete" data-reflow="true">
                 <option value="permanent" ${(t.preDownloadDelete || 'permanent') === 'permanent' ? 'selected' : ''}>${L("Definitivamente")}</option>
                 <option value="trash" ${t.preDownloadDelete === 'trash' ? 'selected' : ''}>${L("Nel cestino (non funziona sulle cartelle di rete)")}</option>
+                <option value="folder" ${t.preDownloadDelete === 'folder' ? 'selected' : ''}>${L("In una sottocartella _cestino che si svuota da sola (anche in rete)")}</option>
               </select>
-            </div>`
+            </div>
+            ${t.preDownloadDelete === 'folder' ? `<div class="field"><label>${L("Giorni prima di eliminarli per sempre")}</label><input type="number" min="1" data-bind="preDownloadTrashDays" value="${t.preDownloadTrashDays ?? 7}" /></div>` : ''}`
           : ''
       }
       ${
@@ -1325,6 +1447,11 @@ function renderEditor() {
         </select>
       </div>
       ${
+        timing === 'before' && preDownloadAction !== 'none'
+          ? `<div class="field span-2"><label class="toggle"><span class="switch ${t.preDownloadSafe ? 'on' : ''}" data-toggle="preDownloadSafe"></span> ${L("A prova di errore: metti i file da parte e, se il download fallisce, rimettili al loro posto")}</label></div>`
+          : ''
+      }
+      ${
         preDownloadAction === 'deleteAll' && scope === 'all'
           ? `<div class="hint" style="color:var(--err)">${L("Attenzione: verranno eliminati TUTTI i file della cartella, anche quelli non scaricati da questo task (per esempio file .txt di configurazione di altri programmi). Se la cartella è condivisa con altri task o programmi scegli \"Solo il file con lo stesso nome\" o un modello.")}</div>`
           : timing === 'before' && preDownloadAction === 'deleteAll'
@@ -1340,6 +1467,25 @@ function renderEditor() {
           <option value="archive" ${(t.existingFile || 'archive') === 'archive' ? 'selected' : ''}>${L("Conserva il vecchio rinominandolo (.old-data-ora)")}</option>
           <option value="overwrite" ${t.existingFile === 'overwrite' ? 'selected' : ''}>${L("Sovrascrivi (nessuna copia: utile per cartelle di scambio)")}</option>
         </select>
+      </div>
+      ${
+        (t.existingFile || 'archive') === 'archive' || preDownloadAction === 'move'
+          ? `<div class="field-grid">
+              <div class="field"><label>${L("Copie vecchie (.old-…): tieni al massimo (0 = tutte)")}</label><input type="number" min="0" data-bind="oldCopiesKeep" value="${t.oldCopiesKeep ?? 0}" /></div>
+              <div class="field"><label>${L("…ed elimina quelle più vecchie di N giorni (0 = mai)")}</label><input type="number" min="0" data-bind="oldCopiesDays" value="${t.oldCopiesDays ?? 0}" /></div>
+            </div>`
+          : ''
+      }
+      <div class="field span-2">
+        <label>${L("Limite di spazio della cartella in GB (0 = nessun limite): se superato, elimina i file più vecchi")}</label>
+        <input type="number" min="0" step="0.5" data-bind="quotaGB" value="${t.quotaGB ?? 0}" />
+      </div>
+      <div class="field span-2">
+        <div class="btn-row">
+          <button type="button" class="btn btn-sm" id="btn-preview-cleanup" title="${escapeHtml(L("Mostra che cosa verrebbe spostato o eliminato adesso, senza toccare nulla"))}">${L("👁 Anteprima pulizia")}</button>
+          <button type="button" class="btn btn-sm" id="btn-run-cleanup" title="${escapeHtml(L("Esegue solo la pulizia della cartella, senza scaricare"))}">${L("🧹 Pulisci ora")}</button>
+        </div>
+        <pre class="action-preview" id="cleanup-preview" style="display:none"></pre>
       </div>
       <div class="field span-2">
         <label>${L("Checksum SHA-256 atteso (facoltativo: se il file scaricato non coincide, il download fallisce)")}</label>
@@ -1526,6 +1672,9 @@ function renderSettings() {
       <h3>${L("Aggiornamenti")}</h3>
       <div class="field span-2">
         <label class="toggle"><span class="switch ${s.checkUpdates !== false ? 'on' : ''}" data-setting-toggle="checkUpdates"></span> ${L("Controlla automaticamente se esiste una nuova versione (avviso e download su richiesta, nessuna installazione automatica)")}</label>
+      </div>
+      <div class="field span-2">
+        <label class="toggle"><span class="switch ${s.notifyNewVersion !== false ? 'on' : ''}" data-setting-toggle="notifyNewVersion"></span> ${L("Avvisami anche via email/Telegram quando esce una nuova versione (una sola volta per versione)")}</label>
       </div>
       <div class="btn-row">
         <button class="btn" id="btn-check-updates">${L("Controlla aggiornamenti")}</button>
@@ -1951,7 +2100,7 @@ function bindEditorEvents() {
     el.addEventListener('click', () => {
       const path = el.dataset.toggle;
       const current = getPath(state.editing, path);
-      const next = !(current !== false);
+      const next = path === 'preDownloadSafe' ? !current : !(current !== false); // this one is off unless set
       setPath(state.editing, path, next);
       const scheduleEnableMatch = path.match(/^schedules\.(\d+)\.enabled$/);
       if (scheduleEnableMatch && next) rearmSchedule(state.editing.schedules[Number(scheduleEnableMatch[1])]);
@@ -2182,6 +2331,44 @@ function bindEditorEvents() {
   if (runDownloadBtn) runDownloadBtn.addEventListener('click', () => runPartFromEditor(runDownloadBtn, { mode: 'download' }));
   const runActionsBtn = document.getElementById('btn-run-actions');
   if (runActionsBtn) runActionsBtn.addEventListener('click', () => runPartFromEditor(runActionsBtn, { mode: 'actions' }));
+  const previewCleanupBtn = document.getElementById('btn-preview-cleanup');
+  const cleanupBox = document.getElementById('cleanup-preview');
+  const describeCleanup = (p) => {
+    const lines = [L('Cartella: {folder}', { folder: p.folder })];
+    const names = (a) => a.slice(0, 15).join('\n  ') + (a.length > 15 ? '\n  …' : '');
+    if (p.items.length) {
+      const verb = p.action === 'move' ? L('Verranno spostati in {target}:', { target: p.target }) : p.how === 'trash' ? L('Andranno nel cestino del sistema:') : p.how === 'folder' ? L('Andranno nella cartella _cestino:') : L('Verranno eliminati per sempre:');
+      lines.push(`${verb} (${p.items.length})\n  ${names(p.items)}`);
+    }
+    if (p.oldCopies.length) lines.push(`${L('Copie vecchie da eliminare:')} (${p.oldCopies.length})\n  ${names(p.oldCopies)}`);
+    if (p.quota?.remove.length) lines.push(`${L('Limite di spazio ({limit} GB, ora {now} MB): eliminati per sempre i più vecchi:', { limit: p.quota.limitGB, now: p.quota.totalMB })} (${p.quota.remove.length})\n  ${names(p.quota.remove)}`);
+    if (p.trashExpired.length) lines.push(`${L('Cartelle scadute nel _cestino da svuotare:')} (${p.trashExpired.length})`);
+    if (lines.length === 1) lines.push(L('Niente da fare: la cartella è già a posto.'));
+    return lines;
+  };
+  if (previewCleanupBtn)
+    previewCleanupBtn.addEventListener('click', async () => {
+      if (cleanupBox.style.display !== 'none') {
+        cleanupBox.style.display = 'none';
+        return;
+      }
+      await window.api.tasks.save(state.editing);
+      const p = await window.api.tasks.previewCleanup(state.editing.id);
+      cleanupBox.textContent = describeCleanup(p).join('\n');
+      cleanupBox.style.display = '';
+    });
+  const cleanupNowBtn = document.getElementById('btn-run-cleanup');
+  if (cleanupNowBtn)
+    cleanupNowBtn.addEventListener('click', async () => {
+      await window.api.tasks.save(state.editing);
+      const p = await window.api.tasks.previewCleanup(state.editing.id);
+      const lines = describeCleanup(p);
+      cleanupBox.textContent = lines.join('\n');
+      cleanupBox.style.display = '';
+      if (!(p.items.length || p.oldCopies.length || p.quota?.remove.length || p.trashExpired.length)) return;
+      if (!confirm(`${L('Eseguire questa pulizia adesso?')}\n\n${lines.join('\n')}`)) return;
+      await runPartFromEditor(cleanupNowBtn, { mode: 'cleanup' });
+    });
   const runOtherBtn = document.getElementById('btn-run-actions-other');
   if (runOtherBtn)
     runOtherBtn.addEventListener('click', async () => {
@@ -2270,9 +2457,9 @@ async function paintActionsStatus(taskId, el) {
 
 async function runPartFromEditor(btn, opts) {
   await window.api.tasks.save(state.editing);
-  document.querySelectorAll('#btn-run-now,#btn-run-download,#btn-run-actions,#btn-run-actions-other,[data-run-action]').forEach((b) => (b.disabled = true));
+  document.querySelectorAll('#btn-run-now,#btn-run-download,#btn-run-actions,#btn-run-actions-other,#btn-run-cleanup,[data-run-action]').forEach((b) => (b.disabled = true));
   const result = await runTaskPart(state.editing.id, opts);
-  document.querySelectorAll('#btn-run-now,#btn-run-download,#btn-run-actions,#btn-run-actions-other,[data-run-action]').forEach((b) => (b.disabled = false));
+  document.querySelectorAll('#btn-run-now,#btn-run-download,#btn-run-actions,#btn-run-actions-other,#btn-run-cleanup,[data-run-action]').forEach((b) => (b.disabled = false));
   await refreshSidebar();
   if (btn && document.body.contains(btn)) flashButton(btn, result.status === 'error' ? L('Errore ✕') : L('Fatto ✓'));
   return result;
@@ -2423,6 +2610,7 @@ async function renderTasksPage() {
         ? `<div class="page-actions">
             <button class="btn btn-primary" id="page-new-task">${L("+ Nuovo task")}</button>
             <button class="btn" id="page-import-task">${L("⤒ Importa task da file")}</button>
+            <span class="page-view">${viewControls('sortPage', { search: 'page-search', sort: 'page-sort', filter: 'page-filter', reset: 'page-view-reset' })}</span>
           </div>`
         : `<div class="page-actions">
             <div class="seg-control">
@@ -2462,18 +2650,14 @@ async function renderTasksPage() {
       ? `<div class="hint" style="margin-bottom:10px">${range === '7d' ? L('{n} passaggi previsti nei prossimi 7 giorni', { n: items.length }) : L('{n} passaggi previsti nelle prossime 24 ore', { n: items.length })}</div><div class="timeline">${rows}</div>`
       : `<div class="hint">${L("Nessun passaggio previsto nel periodo.")}</div>`;
   } else {
-    const sorted = [...state.tasks].sort((a, b) => {
-      const ka = a.enabled && a.nextRun ? new Date(a.nextRun).getTime() : Infinity;
-      const kb = b.enabled && b.nextRun ? new Date(b.nextRun).getTime() : Infinity;
-      return ka - kb || a.name.localeCompare(b.name);
-    });
+    const sorted = sortTasks(state.tasks.filter(taskMatchesView), state.view.sortPage);
     const cards = sorted
       .map((t) => {
         const next = t.enabled && t.nextRun ? new Date(t.nextRun) : null;
         const history = t.history || [];
         const ok = history.filter((h) => h.status === 'success').length;
         const ko = history.filter((h) => h.status === 'error').length;
-        const last = history.find((h) => h.mode !== 'actions');
+        const last = history.find((h) => h.mode !== 'actions' && h.mode !== 'cleanup');
         const schedules = (t.schedules || []).filter((s) => s.enabled !== false);
         const source = t.sourceType === 'local' ? t.localPath : t.url;
         const running = !!state.activeDownloads[t.id];
@@ -2517,11 +2701,23 @@ async function renderTasksPage() {
       </div>`;
       })
       .join('');
-    body = cards ? `<div class="task-grid">${cards}</div>` : `<div class="hint">${escapeHtml(tr('noTasks'))}</div>`;
+    body = cards
+      ? `<div class="task-grid">${cards}</div>`
+      : `<div class="hint">${escapeHtml(state.tasks.length ? L('Nessun task corrisponde ai filtri.') : tr('noTasks'))}</div>`;
   }
 
   root.innerHTML = header + body;
 
+  if (document.getElementById('page-search'))
+    bindViewControls('sortPage', { search: 'page-search', sort: 'page-sort', filter: 'page-filter', reset: 'page-view-reset' }, async (refocus) => {
+      renderSidebar();
+      await renderTasksPage();
+      if (refocus) {
+        const el = document.getElementById('page-search');
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }
+    });
   root.querySelectorAll('[data-steps-range]').forEach((el) => {
     el.addEventListener('click', () => {
       state.stepsRange = el.dataset.stepsRange;
@@ -2779,6 +2975,7 @@ function applyStaticTranslations() {
 (async function init() {
   initGlobalUI();
   state.settings = await window.api.settings.get();
+  loadView();
   applyTheme(state.settings.themeMode);
   applyStaticTranslations();
   tickClock();

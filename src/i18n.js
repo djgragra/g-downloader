@@ -472,6 +472,46 @@ const TEXT = {
  "[G-Downloader] File pronto: {name}": [
   "[G-Downloader] File ready: {name}",
   "[G-Downloader] Archivo listo: {name}"
+ ],
+ "È disponibile la nuova versione {latest} di G-Downloader (installata: {current}).\nApri l'app: in alto trovi l'avviso con \"Scarica e installa\".\n{url}": [
+  "A new version of G-Downloader is available: {latest} (installed: {current}).\nOpen the app: the notice at the top has \"Download and install\".\n{url}",
+  "Hay una versión nueva de G-Downloader: {latest} (instalada: {current}).\nAbre la app: arriba verás el aviso con \"Descargar e instalar\".\n{url}"
+ ],
+ "[G-Downloader] Nuova versione {latest} disponibile": [
+  "[G-Downloader] New version {latest} available",
+  "[G-Downloader] Versión nueva {latest} disponible"
+ ],
+ "Cestino della cartella: eliminate definitivamente {n} cartelle scadute.": [
+  "Folder bin: {n} expired folders deleted for good.",
+  "Papelera de la carpeta: {n} carpetas caducadas eliminadas para siempre."
+ ],
+ "Copie vecchie eliminate: {n} ({names}).": [
+  "Old copies deleted: {n} ({names}).",
+  "Copias antiguas eliminadas: {n} ({names})."
+ ],
+ "Limite di spazio: eliminati {n} file più vecchi ({mb} MB).": [
+  "Size limit: {n} oldest files deleted ({mb} MB).",
+  "Límite de espacio: {n} archivos más antiguos eliminados ({mb} MB)."
+ ],
+ "Download non riuscito: i file messi da parte sono stati rimessi al loro posto ({n}).": [
+  "Download failed: the files set aside were put back where they were ({n}).",
+  "La descarga falló: los archivos apartados se han devuelto a su sitio ({n})."
+ ],
+ "Pulizia completata dopo il download: {n} elementi.": [
+  "Cleanup completed after the download: {n} items.",
+  "Limpieza completada tras la descarga: {n} elementos."
+ ],
+ "Messi da parte {n} elementi: verranno spostati solo se il download riesce.": [
+  "{n} items set aside: they will only be moved if the download succeeds.",
+  "{n} elementos apartados: solo se moverán si la descarga tiene éxito."
+ ],
+ "Messi da parte {n} elementi: verranno eliminati solo se il download riesce.": [
+  "{n} items set aside: they will only be deleted if the download succeeds.",
+  "{n} elementos apartados: solo se eliminarán si la descarga tiene éxito."
+ ],
+ "Pulizia manuale della cartella: {folder}": [
+  "Manual folder cleanup: {folder}",
+  "Limpieza manual de la carpeta: {folder}"
  ]
 };
 
