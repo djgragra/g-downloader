@@ -990,3 +990,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .view-search, .view-select { font-size: 12px; padding: 5px 8px; }
 .page-view { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-left: auto; }
 .page-view .view-search { width: 200px; }
+
+.task-list-head { display: flex; align-items: center; justify-content: space-between; padding-right: 10px; }
+.task-list-head .task-list-header { flex: 1; min-width: 0; }
+#task-toolbar-toggle.view-active { color: var(--accent); border-color: var(--accent); }

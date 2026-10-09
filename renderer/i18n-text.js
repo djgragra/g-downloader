@@ -1667,6 +1667,10 @@ const UI_TEXT = {
  "Eseguire questa pulizia adesso?": [
   "Run this cleanup now?",
   "¿Ejecutar esta limpieza ahora?"
+ ],
+ "Mostra o nascondi la ricerca e i filtri": [
+  "Show or hide the search and filters",
+  "Mostrar u ocultar la búsqueda y los filtros"
  ]
 };
 

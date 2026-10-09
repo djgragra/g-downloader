@@ -5,7 +5,7 @@ Versions use `YY.M.N`. Newest first.
 ## 26.10.1 — 2026-10-09
 (The version number jumps from 26.9.16: 26.9.16 was published on 2026-10-07 with the wrong month.)
 - **Folder cleanup, safer and tidier.** *Fail-safe*: files are set aside and put back if the download fails (also after a crash). A `_cestino` bin that empties itself after N days, also on network folders. A cap on the `.old-…` copies (keep N / delete after N days). A folder **size limit** that deletes the oldest files. A **Cleanup preview** and a **Clean now** button (cleanup without downloading).
-- **Search, filter and sort the tasks** in the sidebar and in the Schedule: search words, sort by category / A → Z / next run time / status, filter active / disabled / with errors / actions waiting. The last sort and filter are remembered.
+- **Search, filter and sort the tasks** in the sidebar and in the Schedule: search words, sort by category / A → Z / next run time / status, filter active / disabled / with errors / actions waiting. The last sort and filter are remembered, and the search bar can be folded away with the 🔍 button to leave more room for the list.
 - **New-version notice by email/Telegram**, once per version, for machines nobody looks at (option in Settings → Updates).
 - Cleanup-only runs show in the console and history but do not count as downloads in the statistics.
 

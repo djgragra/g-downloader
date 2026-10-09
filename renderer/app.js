@@ -11,7 +11,7 @@ const state = {
   activeDownloads: {}, // taskId -> { name, pct, received, total }
   categoryFilter: null, // set from the dashboard "by category" card, filters the sidebar task list
   // search / filter / sort of the task lists; sort and filter are remembered between sessions
-  view: { search: '', filter: 'all', sortSide: 'category', sortPage: 'next' }
+  view: { search: '', filter: 'all', sortSide: 'category', sortPage: 'next', toolbarOpen: true }
 };
 
 let lastFocusedTemplateInput = null;
@@ -437,8 +437,8 @@ function sortTasks(list, how) {
 const viewIsActive = () => state.view.search.trim() !== '' || state.view.filter !== 'all';
 
 function persistView() {
-  const { filter, sortSide, sortPage } = state.view;
-  window.api.settings.update({ taskView: { filter, sortSide, sortPage } }).then((s) => (state.settings = s));
+  const { filter, sortSide, sortPage, toolbarOpen } = state.view;
+  window.api.settings.update({ taskView: { filter, sortSide, sortPage, toolbarOpen } }).then((s) => (state.settings = s));
 }
 
 function loadView() {
@@ -446,6 +446,7 @@ function loadView() {
   if (VIEW_FILTERS.includes(v.filter)) state.view.filter = v.filter;
   if (VIEW_SORTS.includes(v.sortSide)) state.view.sortSide = v.sortSide;
   if (VIEW_SORTS.includes(v.sortPage)) state.view.sortPage = v.sortPage;
+  if (typeof v.toolbarOpen === 'boolean') state.view.toolbarOpen = v.toolbarOpen;
 }
 
 function viewControls(sortKey, ids) {
@@ -502,7 +503,22 @@ function renderSidebarToolbar() {
     document.getElementById(ids.filter).value = state.view.filter;
     document.getElementById(ids.reset).style.display = viewIsActive() ? '' : 'none';
   }
-  box.style.display = state.tasks.length > 4 || viewIsActive() ? '' : 'none'; // not worth it for a handful of tasks
+  // not worth it for a handful of tasks; the 🔍 button next to the title folds the bar away
+  const useful = state.tasks.length > 4 || viewIsActive();
+  box.style.display = useful && state.view.toolbarOpen ? '' : 'none';
+  const toggle = document.getElementById('task-toolbar-toggle');
+  toggle.style.display = useful ? '' : 'none';
+  toggle.textContent = `🔍 ${state.view.toolbarOpen ? '▾' : '▸'}`;
+  toggle.title = L('Mostra o nascondi la ricerca e i filtri');
+  toggle.classList.toggle('view-active', viewIsActive() && !state.view.toolbarOpen); // a view is hiding tasks
+  if (!toggle.dataset.bound) {
+    toggle.dataset.bound = '1';
+    toggle.addEventListener('click', () => {
+      state.view.toolbarOpen = !state.view.toolbarOpen;
+      persistView();
+      renderSidebarToolbar();
+    });
+  }
 }
 
 function groupTasksByCategory(tasks) {
