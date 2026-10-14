@@ -1,51 +1,52 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { app } from 'electron';
+import { createLogger } from './logs.js';
 
-// One file per day under userData/logs, kept for LOG_RETENTION_DAYS then pruned —
-// a durable trail for audit over long periods, separate from the in-app history
-// (capped to the last 50 runs per task) and the console (cleared on restart).
-const LOG_RETENTION_DAYS = 30;
+// Log files: one per day under userData/logs, 5 MB at most each, the last 7 days kept (src/logs.js, apps/COMMON-FEATURES.md 5.4).
+// Separate from the in-app history (capped to the last 50 runs per task) and from the console (cleared on restart).
+const RETENTION_DAYS = 7;
+let logger = null;
+let lastError = null;
 
-function logDir() {
+export function getLogDir() {
   const dir = path.join(app.getPath('userData'), 'logs');
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
 
-function logFilePath(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return path.join(logDir(), `g-downloader-${y}-${m}-${d}.log`);
+function get() {
+  return (logger ||= createLogger({ dir: getLogDir(), prefix: 'g-downloader', retentionDays: RETENTION_DAYS }));
 }
+
+// Credentials written inside an address (ftp://user:password@host/…) never reach a log line.
+export const redactUrls = (text) => String(text ?? '').replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/?#@]*@/gi, '$1***@');
 
 export function appendFileLog(entry) {
-  const ts = entry.ts || new Date().toISOString();
-  const level = (entry.level || 'info').toUpperCase();
+  const level = String(entry.level || 'info').toLowerCase();
   // one entry = one line, whatever a server put in its error text
-  const message = String(entry.message ?? '').replace(/[\r\n]+/g, ' ⏎ ');
-  const line = `[${ts}] [${level}] [${entry.taskId || '-'}] ${message}\n`;
-  fs.appendFile(logFilePath(new Date(ts)), line, () => {});
+  const message = redactUrls(String(entry.message ?? '').replace(/[\r\n]+/g, ' ⏎ '));
+  const scope = entry.taskId && entry.taskId !== '-' ? String(entry.taskId) : '';
+  if (level === 'error') lastError = { t: Date.now(), message };
+  get().log(level, message, scope);
 }
 
-export function pruneOldLogs(days = LOG_RETENTION_DAYS) {
-  const dir = logDir();
-  const cutoff = Date.now() - days * 86_400_000;
-  let entries;
+export const getLastError = () => lastError;
+
+export function pruneOldLogs() {
+  get().prune();
+  // files of versions before 26.10.2 (g-downloader-YYYY-MM-DD.log)
+  const dir = getLogDir();
+  const cutoff = Date.now() - RETENTION_DAYS * 86_400_000;
   try {
-    entries = fs.readdirSync(dir);
+    for (const name of fs.readdirSync(dir)) {
+      if (!/^g-downloader-\d{4}-\d{2}-\d{2}\.log$/.test(name)) continue;
+      const full = path.join(dir, name);
+      if (fs.statSync(full).mtimeMs < cutoff) fs.rmSync(full, { force: true });
+    }
   } catch {
-    return;
-  }
-  for (const name of entries) {
-    const full = path.join(dir, name);
-    fs.stat(full, (err, stat) => {
-      if (!err && stat.mtimeMs < cutoff) fs.unlink(full, () => {});
-    });
+    /* nothing to clean */
   }
 }
 
-export function getLogDir() {
-  return logDir();
-}
+export const flushLogs = () => (logger ? logger.flush() : Promise.resolve());

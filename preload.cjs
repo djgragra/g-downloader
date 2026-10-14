@@ -17,7 +17,7 @@ contextBridge.exposeInMainWorld('api', {
     importOne: () => ipcRenderer.invoke('task:import')
   },
   schedules: {
-    preview: (schedule) => ipcRenderer.invoke('schedule:preview', schedule)
+    preview: (schedule, exceptions) => ipcRenderer.invoke('schedule:preview', schedule, exceptions)
   },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
@@ -42,9 +42,25 @@ contextBridge.exposeInMainWorld('api', {
   },
   updates: {
     check: () => ipcRenderer.invoke('update:check'),
+    state: () => ipcRenderer.invoke('update:state'),
     download: () => ipcRenderer.invoke('update:download'),
+    cancel: () => ipcRenderer.invoke('update:cancel'),
     install: () => ipcRenderer.invoke('update:install'),
+    remindLater: () => ipcRenderer.invoke('update:remind-later'),
+    skip: (version) => ipcRenderer.invoke('update:skip', version),
+    startup: () => ipcRenderer.invoke('update:startup'),
+    startupAck: () => ipcRenderer.invoke('update:startup-ack'),
     open: (url) => ipcRenderer.invoke('update:open', url)
+  },
+  support: {
+    copyInfo: () => ipcRenderer.invoke('support:copy')
+  },
+  categories: {
+    rename: (from, to) => ipcRenderer.invoke('categories:rename', from, to),
+    remove: (name, moveTo) => ipcRenderer.invoke('categories:delete', name, moveTo)
+  },
+  exceptions: {
+    apply: (ids, exception) => ipcRenderer.invoke('exceptions:apply', ids, exception)
   },
   files: {
     reveal: (filePath) => ipcRenderer.invoke('file:reveal', filePath)
@@ -53,8 +69,8 @@ contextBridge.exposeInMainWorld('api', {
     openLogFolder: () => ipcRenderer.invoke('system:open-log-folder')
   },
   config: {
-    export: () => ipcRenderer.invoke('config:export'),
-    import: () => ipcRenderer.invoke('config:import')
+    export: (opts) => ipcRenderer.invoke('config:export', opts),
+    import: (opts) => ipcRenderer.invoke('config:import', opts)
   },
   on: {
     log: (cb) => ipcRenderer.on('event:log', (_e, data) => cb(data)),

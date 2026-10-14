@@ -100,18 +100,35 @@ function cleanPathForDisplay(p) {
   return s.trim();
 }
 
-// ---------- updates ----------
-// One state, shown both in the bar at the top and in Settings -> Updates:
-// 'available' -> 'downloading' -> 'ready' (installer downloaded and verified), or 'error'.
-const upd = { state: null, info: null, text: '', pct: 0, hidden: false };
+// ---------- generic modal ----------
+function openModal(html) {
+  const overlay = document.getElementById('app-modal-overlay');
+  document.getElementById('app-modal-box').innerHTML = `<button type="button" class="modal-close" data-close-app-modal title="${escapeHtml(L("Chiudi"))}">✕</button>${html}`;
+  overlay.classList.add('open');
+}
 
-function updateErrorText(code) {
+function closeModal() {
+  document.getElementById('app-modal-overlay').classList.remove('open');
+  if (state.modalOnClose) {
+    const fn = state.modalOnClose;
+    state.modalOnClose = null;
+    fn();
+  }
+}
+
+// ---------- updates ----------
+// One state, shown both in the bar at the top and in Settings -> Updates (apps/COMMON-FEATURES.md, section 4):
+// 'available' -> 'downloading' -> 'ready' (installer downloaded and verified), or 'error'; 'updated' after the install.
+const upd = { state: null, info: null, text: '', pct: 0, hidden: false, retry: null, lastCheck: null, startup: null };
+
+function updateErrorText(code, extra) {
   const known = {
     'checksum-mismatch': L('il file scaricato non corrisponde al checksum della release ed è stato eliminato'),
     'no-installer': L('nella release non c\'è un installer per questo sistema'),
     'no-checksums': L('nella release manca il checksum SHA-256 dell\'installer'),
     'no-update': L('nessun aggiornamento disponibile'),
-    busy: L('un download è in corso: riprova quando è finito')
+    stalled: L('il download si è fermato: nessun dato ricevuto per un minuto'),
+    busy: L('{n} download in corso: riprova quando sono finiti (chiudere ora li interromperebbe)', { n: extra?.count || 1 })
   };
   return known[code] || code;
 }
@@ -129,6 +146,17 @@ function installLabel() {
   return window.api.platform === 'win32' ? L('Chiudi e installa') : L('Apri installer');
 }
 
+// The buttons of the current state (same in the bar and in Settings).
+function updateButtons(s) {
+  const b = (action, label, cls = '') => `<button class="btn btn-sm ${cls}" data-upd="${action}">${escapeHtml(label)}</button>`;
+  if (s === 'available') return b('download', L('Scarica e installa')) + b('later', L('Ricordamelo dopo')) + b('skip', L('Salta questa versione')) + b('notes', L('Note di rilascio'));
+  if (s === 'downloading') return b('cancel', L('Annulla'));
+  if (s === 'ready') return b('install', installLabel(), 'btn-install');
+  if (s === 'error') return b('retry', L('Riprova')) + b('page', L('Apri pagina di download'));
+  if (s === 'updated') return upd.startup?.whatsNew ? b('whatsnew', L('Novità')) : '';
+  return '';
+}
+
 // Draws the shared state into the bar and, when Settings is open, into its Updates card.
 function paintUpdate() {
   const s = upd.state;
@@ -142,42 +170,41 @@ function paintUpdate() {
       bar.className = 'update-banner';
       document.querySelector('.main').prepend(bar);
     }
-    bar.classList.toggle('ready', s === 'ready');
+    bar.classList.toggle('ready', s === 'ready' || s === 'updated');
     bar.classList.toggle('error', s === 'error');
+    const notes = s === 'available' && upd.info?.notes ? `<div class="update-notes">${escapeHtml(upd.info.notes)}</div>` : '';
     bar.innerHTML = `
-      <span class="update-banner-text">${escapeHtml(upd.text)}</span>
-      ${s === 'downloading' ? `<span class="upd-progress"><i style="width:${upd.pct}%"></i></span>` : ''}
-      ${s === 'available' ? `<button class="btn btn-sm" data-upd="download">${escapeHtml(L('Scarica e installa'))}</button>` : ''}
-      ${s === 'ready' ? `<button class="btn btn-sm btn-install" data-upd="install">${escapeHtml(installLabel())}</button>` : ''}
-      ${s === 'error' ? `<button class="btn btn-sm" data-upd="page">${escapeHtml(L('Apri pagina di download'))}</button>` : ''}
-      ${s !== 'downloading' ? `<button class="btn btn-sm" data-upd="hide" title="${escapeHtml(L('Nascondi'))}">×</button>` : ''}`;
+      <div class="update-banner-main">
+        <span class="update-banner-text">${escapeHtml(upd.text)}</span>
+        ${s === 'downloading' ? `<span class="upd-progress"><i style="width:${upd.pct}%"></i></span>` : ''}
+        ${updateButtons(s)}
+        ${s !== 'downloading' ? `<button class="btn btn-sm" data-upd="hide" title="${escapeHtml(L('Nascondi'))}">×</button>` : ''}
+      </div>${notes}`;
   }
 
-  const out = document.getElementById('update-result');
-  if (!out) return;
-  const color = { error: 'var(--err)', ready: 'var(--ok)', available: 'var(--warn)' }[s];
-  if (s) {
-    out.textContent = upd.text;
-    out.style.color = color || '';
-  }
-  const show = (id, on) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = on ? '' : 'none';
-  };
-  show('btn-update-download', s === 'available');
-  show('btn-update-install', s === 'ready');
-  show('btn-update-page', s === 'error');
-  show('update-progress-settings', s === 'downloading');
-  const fill = document.querySelector('#update-progress-settings i');
-  if (fill) fill.style.width = `${upd.pct}%`;
-  const install = document.getElementById('btn-update-install');
-  if (install) install.textContent = installLabel();
+  const box = document.getElementById('update-box');
+  if (!box) return;
+  const color = { error: 'var(--err)', ready: 'var(--ok)', available: 'var(--warn)', updated: 'var(--ok)' }[s];
+  box.innerHTML = s
+    ? `<div class="btn-row">${updateButtons(s)}</div>
+       ${s === 'downloading' ? `<span class="upd-progress upd-progress-settings"><i style="width:${upd.pct}%"></i></span>` : ''}
+       <span class="hint" style="color:${color || 'inherit'}">${escapeHtml(upd.text)}</span>`
+    : '';
   const check = document.getElementById('btn-check-updates');
   if (check) check.disabled = s === 'downloading';
 }
 
+function paintLastCheck() {
+  const el = document.getElementById('update-last-check');
+  if (!el) return;
+  const c = upd.lastCheck;
+  el.textContent = c ? `${L('Ultimo controllo:')} ${fmtDate(new Date(c.at).toISOString())} — ${c.ok ? L('riuscito') : L('non riuscito: {error}', { error: c.error || '' })}` : L('Ultimo controllo: mai');
+  el.style.color = c && !c.ok ? 'var(--err)' : '';
+}
+
+// info comes from the main process: { ..., banner: 'show' | 'skipped' | 'snoozed' | 'none' }
 function showUpdateBanner(info) {
-  if (!info?.available) return;
+  if (!info?.available || info.banner !== 'show') return;
   // never go back to "available" while downloading, or once this version is ready to install
   if (upd.state === 'downloading' || (upd.state === 'ready' && upd.info?.latest === info.latest)) return;
   setUpdateState('available', L('Nuova versione {latest} disponibile (installata: {current}).', { latest: info.latest, current: info.current }), info);
@@ -186,32 +213,63 @@ function showUpdateBanner(info) {
 async function startUpdateDownload() {
   if (upd.state === 'downloading') return;
   const v = upd.info?.latest || '';
+  upd.retry = 'download';
   setUpdateState('downloading', L('Download della versione {v}…', { v }));
   const res = await window.api.updates.download();
   if (res.ok) {
     const text =
       window.api.platform === 'win32'
-        ? L('Versione {v} scaricata e verificata. "Chiudi e installa" chiude G-Downloader (i download pianificati si fermano) e avvia l\'installazione; al termine l\'app si riapre.', { v })
+        ? L('Versione {v} scaricata e verificata (SHA-256). "Chiudi e installa" chiude G-Downloader (i download pianificati si fermano) e avvia l\'installazione; al termine l\'app si riapre.', { v })
         : window.api.platform === 'darwin'
-          ? L('Versione {v} scaricata e verificata. "Apri installer" apre il file .dmg: chiudi G-Downloader con "Esci" dall\'icona nella barra dei menu e trascina la nuova versione in Applicazioni.', { v })
-          : L('Versione {v} scaricata e verificata. "Apri installer" mostra il file AppImage nella cartella: chiudi G-Downloader con "Esci" e avvia il nuovo file.', { v });
+          ? L('Versione {v} scaricata e verificata (SHA-256). "Apri installer" apre il file .dmg: chiudi G-Downloader con "Esci" dall\'icona nella barra dei menu e trascina la nuova versione in Applicazioni.', { v })
+          : L('Versione {v} scaricata e verificata (SHA-256). "Apri installer" mostra il file AppImage nella cartella: chiudi G-Downloader con "Esci" e avvia il nuovo file.', { v });
     setUpdateState('ready', text);
+  } else if (res.error === 'cancelled') {
+    if (upd.info?.available) setUpdateState('available', L('Nuova versione {latest} disponibile (installata: {current}).', { latest: upd.info.latest, current: upd.info.current }));
   } else {
     setUpdateState('error', L('Download dell\'aggiornamento non riuscito: {error}', { error: updateErrorText(res.error) }));
   }
 }
 
 async function installUpdate() {
+  upd.retry = 'install';
   const res = await window.api.updates.install();
-  if (!res.ok) setUpdateState('error', L('Installazione non avviata: {error}', { error: updateErrorText(res.error) }));
+  if (!res.ok) setUpdateState('error', L('Installazione non avviata: {error}', { error: updateErrorText(res.error, res) }));
 }
 
-function handleUpdateAction(action) {
+function showWhatsNew(n) {
+  if (!n) return;
+  const w = n.whatsNew;
+  openModal(`
+    <h3>${escapeHtml(L('Novità della versione {v}', { v: n.version }))}${w?.date ? ` <span class="hint">${escapeHtml(w.date)}</span>` : ''}</h3>
+    ${w ? `<ul class="whatsnew-list">${w.bullets.map((x) => `<li>${renderInlineMarkdown(x)}</li>`).join('')}</ul>` : `<p class="hint">${escapeHtml(L('Nessuna nota per questa versione.'))}</p>`}
+    <div class="btn-row"><button class="btn btn-primary" data-close-app-modal>${escapeHtml(L('Chiudi'))}</button></div>`);
+  state.modalOnClose = () => window.api.updates.startupAck(); // seen: the banner "Updated to X" stays until it is closed
+}
+
+// bold and code of the changelog, nothing else (the text is escaped first)
+function renderInlineMarkdown(text) {
+  return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>').replace(/\*(.+?)\*/g, '<i>$1</i>');
+}
+
+async function handleUpdateAction(action) {
   if (action === 'download') startUpdateDownload();
   else if (action === 'install') installUpdate();
-  else if (action === 'page') window.api.updates.open(upd.info?.url);
+  else if (action === 'retry') (upd.retry === 'install' ? installUpdate() : startUpdateDownload());
+  else if (action === 'cancel') window.api.updates.cancel();
+  else if (action === 'page' || action === 'notes') window.api.updates.open(upd.info?.url);
+  else if (action === 'later') {
+    await window.api.updates.remindLater();
+    upd.state = null;
+    paintUpdate();
+  } else if (action === 'skip') {
+    await window.api.updates.skip(upd.info?.latest);
+    upd.state = null;
+    paintUpdate();
+  } else if (action === 'whatsnew') showWhatsNew(upd.startup);
   else if (action === 'hide') {
     upd.hidden = true;
+    if (upd.state === 'updated') window.api.updates.startupAck();
     paintUpdate();
   }
 }
@@ -224,6 +282,22 @@ function onUpdateProgress({ received, total }) {
     L('Download della versione {v}…', { v: upd.info?.latest || '' }) +
     (total ? ` ${upd.pct}% (${mb(received)}/${mb(total)} MB)` : ` ${mb(received)} MB`);
   paintUpdate();
+}
+
+// At start: what the main process already knows (a check done, an installer ready, a first start after an update).
+async function initUpdates() {
+  const st = await window.api.updates.state();
+  upd.lastCheck = st.state?.lastCheck || null;
+  if (st.ready && st.last?.available) {
+    upd.info = st.last;
+    setUpdateState('ready', L('Versione {v} scaricata e verificata (SHA-256).', { v: st.ready.version }));
+  } else if (st.last) showUpdateBanner(st.last);
+  const startup = await window.api.updates.startup();
+  if (startup) {
+    upd.startup = startup;
+    setUpdateState('updated', L('Aggiornato a G-Downloader {v}.', { v: startup.version }));
+    showWhatsNew(startup);
+  }
 }
 
 function escapeHtml(s) {
@@ -383,11 +457,26 @@ async function refreshSidebar() {
 }
 
 // ---------- sidebar ----------
+// The calendar exception that applies today, if any (src/exceptions.js).
+function exceptionToday(task) {
+  const d = new Date();
+  const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const list = (task.exceptions || []).filter((ex) => ex.from <= k && k <= ex.to);
+  return list.find((ex) => ex.mode === 'skip') || list[0] || null;
+}
+
 function statusBadge(task) {
-  if (!task.enabled) return `<span class="badge badge-off">${L("Disattivo")}</span>`;
-  if (task.lastStatus === 'success') return `<span class="badge badge-ok">OK</span>`;
-  if (task.lastStatus === 'error') return `<span class="badge badge-err">${L("Errore")}</span>`;
-  return `<span class="badge badge-idle">${L("In attesa")}</span>`;
+  let badge;
+  if (!task.enabled) badge = `<span class="badge badge-off">${L("Disattivo")}</span>`;
+  else if (task.lastStatus === 'success') badge = `<span class="badge badge-ok">OK</span>`;
+  else if (task.lastStatus === 'error') badge = `<span class="badge badge-err">${L("Errore")}</span>`;
+  else badge = `<span class="badge badge-idle">${L("In attesa")}</span>`;
+  const ex = task.enabled ? exceptionToday(task) : null;
+  if (ex) {
+    const label = ex.mode === 'skip' ? L('Oggi saltato') : L('Oggi come {weekday}', { weekday: weekdayName(ex.treatAs) });
+    badge += `<span class="badge badge-exc" title="${escapeHtml(exceptionText(ex))}">📅 ${escapeHtml(label)}</span>`;
+  }
+  return badge;
 }
 
 function statusClass(task) {
@@ -1115,9 +1204,9 @@ async function renderDashboard() {
                   .map(
                     (h) => `
                   <div class="activity-row clickable" data-goto-task="${h.taskId}">
-                    <span class="activity-dot ${h.status === 'success' ? 'ok' : 'err'}"></span>
+                    <span class="activity-dot ${h.status === 'success' ? 'ok' : h.status === 'skipped' ? 'skip' : 'err'}"></span>
                     <span class="activity-name">${escapeHtml(h.taskName)}</span>
-                    <span class="activity-detail">${h.status === 'success' ? escapeHtml(h.filepath ? h.filepath.split('/').pop() : tr('completedFallback')) : escapeHtml(h.error || tr('errorFallback'))}</span>
+                    <span class="activity-detail">${h.status === 'success' ? escapeHtml(h.filepath ? h.filepath.split('/').pop() : tr('completedFallback')) : h.status === 'skipped' ? escapeHtml(L('saltato (eccezione)') + (h.note ? ' — ' + h.note : '')) : escapeHtml(h.error || tr('errorFallback'))}</span>
                     <span class="activity-time">${fmtDate(h.finishedAt)}</span>
                   </div>`
                   )
@@ -1206,6 +1295,170 @@ async function renderDashboard() {
   });
 }
 
+// ---------- waiting for a file that is published late ----------
+function renderWaitWindow(t, sourceType) {
+  const ww = { enabled: false, everyMinutes: 1, maxMinutes: 20, minSizeKB: 0, rejectWebPage: true, stableSeconds: 5, ...(t.waitWindow || {}) };
+  return `
+      <div class="field span-2 wait-window">
+        <label class="toggle"><span class="switch ${ww.enabled ? 'on' : ''}" data-toggle="waitWindow.enabled"></span> ${L("Attesa del file: se non è ancora pubblicato, riprova ogni tot minuti per un po'")}</label>
+      </div>
+      ${
+        ww.enabled
+          ? `<div class="field-grid">
+              <div class="field"><label>${L("Riprova ogni (minuti)")}</label><input type="number" min="0.5" step="0.5" data-bind="waitWindow.everyMinutes" value="${ww.everyMinutes}" /></div>
+              <div class="field"><label>${L("Per al massimo (minuti dall'avvio del task)")}</label><input type="number" min="1" data-bind="waitWindow.maxMinutes" value="${ww.maxMinutes}" /></div>
+              <div class="field"><label>${L("Dimensione minima del file (KB, 0 = quella delle Impostazioni)")}</label><input type="number" min="0" data-bind="waitWindow.minSizeKB" value="${ww.minSizeKB}" /></div>
+              ${sourceType === 'local' ? `<div class="field"><label>${L("Aspetta che il file smetta di crescere (secondi, 0 = no)")}</label><input type="number" min="0" data-bind="waitWindow.stableSeconds" value="${ww.stableSeconds}" /></div>` : ''}
+            </div>
+            ${sourceType === 'web' ? `<div class="field span-2"><label class="toggle"><span class="switch ${ww.rejectWebPage !== false ? 'on' : ''}" data-toggle="waitWindow.rejectWebPage"></span> ${L("Tratta una pagina web (errore del server) come file non ancora arrivato")}</label></div>` : ''}
+            <div class="hint">${L("Esempio: il task parte alle 19:55, riprova ogni minuto fino alle 20:15. Un file vuoto, troppo piccolo o una pagina d'errore contano come \"non ancora arrivato\"; una password sbagliata (401) ferma subito l'attesa. Mentre aspetta il task risulta in esecuzione, e con \"Download contemporanei\" limitati occupa un posto.")}</div>`
+          : ''
+      }`;
+}
+
+// ---------- calendar exceptions ----------
+const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+function weekdayName(d) {
+  return new Date(2024, 0, 7 + d).toLocaleDateString(nameLocale(), { weekday: 'long' });
+}
+
+function dayLabel2(key) {
+  const [y, m, d] = String(key).split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(nameLocale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function exceptionText(ex) {
+  const range = ex.from === ex.to ? dayLabel2(ex.from) : `${dayLabel2(ex.from)} → ${dayLabel2(ex.to)}`;
+  const what = ex.mode === 'treat' ? L('tratta come {weekday}', { weekday: weekdayName(ex.treatAs) }) : L('salta (nessun download)');
+  return `${range} — ${what}${ex.note ? ' · ' + ex.note : ''}`;
+}
+
+function exceptionFormHtml(p) {
+  return `
+      <div class="field-grid">
+        <div class="field"><label>${L("Dal")}</label><input type="date" id="${p}-from" /></div>
+        <div class="field"><label>${L("Al (facoltativo, incluso)")}</label><input type="date" id="${p}-to" /></div>
+        <div class="field"><label>${L("Che cosa succede quel giorno")}</label>
+          <select id="${p}-mode"><option value="skip">${L("Salta: non scaricare")}</option><option value="treat">${L("Tratta come un altro giorno della settimana")}</option></select></div>
+        <div class="field" id="${p}-treat-wrap" style="display:none"><label>${L("Segui gli orari di")}</label>
+          <select id="${p}-treat">${WEEKDAY_ORDER.map((d) => `<option value="${d}" ${d === 0 ? 'selected' : ''}>${escapeHtml(weekdayName(d))}</option>`).join('')}</select></div>
+        <div class="field span-2"><label>${L("Nota (facoltativa)")}</label><input type="text" id="${p}-note" maxlength="120" placeholder="${escapeHtml(L("es. Ferragosto, palinsesto festivo dell'agenzia"))}" /></div>
+      </div>`;
+}
+
+function readExceptionForm(p) {
+  const from = document.getElementById(`${p}-from`).value;
+  const to = document.getElementById(`${p}-to`).value || from;
+  const mode = document.getElementById(`${p}-mode`).value;
+  if (!from) return { error: L('Scegli almeno il giorno di inizio.') };
+  if (to < from) return { error: L('La data finale è prima di quella iniziale.') };
+  return { exception: { from, to, mode, ...(mode === 'treat' ? { treatAs: Number(document.getElementById(`${p}-treat`).value) } : {}), note: document.getElementById(`${p}-note`).value.trim() } };
+}
+
+function bindExceptionForm(p) {
+  const mode = document.getElementById(`${p}-mode`);
+  mode.addEventListener('change', () => {
+    document.getElementById(`${p}-treat-wrap`).style.display = mode.value === 'treat' ? '' : 'none';
+  });
+}
+
+function renderExceptionsCard(t) {
+  const list = t.exceptions || [];
+  const today = new Date();
+  const k = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  return `
+    <div class="card">
+      <h3>${L("Eccezioni di calendario")} <span class="hint">${L("— giorni in cui questo task non gira come al solito (festività, produzione ferma, palinsesto festivo dell'agenzia)")}</span></h3>
+      <div id="exceptions-list">
+        ${
+          list.length
+            ? list
+                .map(
+                  (ex, i) => `<div class="exception-row ${ex.from <= k && k <= ex.to ? 'active' : ''}">
+              <span class="exception-text">${escapeHtml(exceptionText(ex))}</span>
+              ${ex.from <= k && k <= ex.to ? `<span class="badge badge-idle">${L("oggi")}</span>` : ''}
+              <button type="button" class="btn btn-xs" data-remove-exception="${i}" title="${escapeHtml(L("Rimuovi"))}">✕</button>
+            </div>`
+                )
+                .join('')
+            : `<div class="hint">${L("Nessuna eccezione.")}</div>`
+        }
+      </div>
+      <h4 class="settings-sub">${L("Nuova eccezione")}</h4>
+      ${exceptionFormHtml('ex')}
+      <div class="btn-row">
+        <button class="btn btn-sm" id="btn-add-exception">${L("+ Aggiungi eccezione")}</button>
+        <button class="btn btn-sm" id="btn-apply-exceptions" title="${escapeHtml(L("Aggiunge la stessa eccezione a più task, scelti a mano o per categoria"))}">${L("Applica a più task…")}</button>
+      </div>
+      <div class="hint">${L("Salta: quel giorno non si scarica. Tratta come: quel giorno valgono gli orari di un altro giorno (con Domenica, le pianificazioni \"lun–ven\" restano ferme e partono quelle del weekend). Le esecuzioni manuali non cambiano. Le modifiche valgono dopo Salva.")}</div>
+    </div>`;
+}
+
+// the same exception for several tasks, picked one by one or by category
+function openApplyExceptions() {
+  const byCat = new Map();
+  for (const t of state.tasks) {
+    const c = (t.category || '').trim();
+    if (!byCat.has(c)) byCat.set(c, []);
+    byCat.get(c).push(t);
+  }
+  const cats = [...byCat.keys()].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)));
+  openModal(`
+    <h3>${escapeHtml(L('Eccezione per più task'))}</h3>
+    ${exceptionFormHtml('bx')}
+    <h4 class="settings-sub">${escapeHtml(L('Task a cui applicarla'))}</h4>
+    <div class="apply-list">
+      ${cats
+        .map(
+          (c) => `<div class="apply-group">
+            <label class="toggle"><input type="checkbox" data-apply-cat="${escapeHtml(c)}" /> <b>${escapeHtml(c || L('Senza categoria'))}</b></label>
+            ${byCat.get(c).map((t) => `<label class="toggle apply-task"><input type="checkbox" data-apply-task="${t.id}" data-cat="${escapeHtml(c)}" ${t.id === state.editing?.id ? 'checked' : ''} /> ${escapeHtml(t.name)}</label>`).join('')}
+          </div>`
+        )
+        .join('')}
+    </div>
+    <div class="hint" id="bx-result"></div>
+    <div class="btn-row"><button class="btn btn-primary" id="bx-apply">${escapeHtml(L('Applica'))}</button><button class="btn" data-close-app-modal>${escapeHtml(L('Annulla'))}</button></div>`);
+  bindExceptionForm('bx');
+  const box = document.getElementById('app-modal-box');
+  box.querySelectorAll('[data-apply-cat]').forEach((el) =>
+    el.addEventListener('change', () => box.querySelectorAll(`[data-apply-task][data-cat="${CSS.escape(el.dataset.applyCat)}"]`).forEach((c) => (c.checked = el.checked)))
+  );
+  document.getElementById('bx-apply').addEventListener('click', async () => {
+    const out = document.getElementById('bx-result');
+    const r = readExceptionForm('bx');
+    if (r.error) {
+      out.style.color = 'var(--err)';
+      out.textContent = r.error;
+      return;
+    }
+    const ids = [...box.querySelectorAll('[data-apply-task]:checked')].map((c) => c.dataset.applyTask);
+    if (!ids.length) {
+      out.style.color = 'var(--err)';
+      out.textContent = L('Scegli almeno un task.');
+      return;
+    }
+    const res = await window.api.exceptions.apply(ids, r.exception);
+    if (!res.ok) {
+      out.style.color = 'var(--err)';
+      out.textContent = res.error || 'error';
+      return;
+    }
+    await loadTasks();
+    await refreshSidebar();
+    await refreshQueue();
+    // the editor holds a copy of the task: bring in what changed
+    if (state.editing && ids.includes(state.editing.id)) {
+      const fresh = await window.api.tasks.get(state.editing.id);
+      if (fresh) state.editing.exceptions = fresh.exceptions;
+    }
+    closeModal();
+    if (state.mode === 'task') renderEditor();
+    alert(L('Eccezione aggiunta a {n} task.', { n: res.count }));
+  });
+}
+
 function renderEditor() {
   const root = document.getElementById('editor-root');
   if (state.mode === 'settings') return renderSettings();
@@ -1257,7 +1510,7 @@ function renderEditor() {
       </div>` : ''}
 
     ${(() => {
-      const last = (t.history || []).find((h) => h.mode !== 'actions' && h.mode !== 'cleanup');
+      const last = (t.history || []).find((h) => h.mode !== 'actions' && h.mode !== 'cleanup' && h.mode !== 'skipped');
       if (!last || last.status !== 'success' || !last.filepath) return '';
       const isAudio = AUDIO_EXTENSIONS.some((ext) => last.filepath.toLowerCase().endsWith(ext));
       return `<div class="card">
@@ -1361,6 +1614,7 @@ function renderEditor() {
           <input type="number" min="1000" step="1000" data-bind="http.retryDelayMs" value="${t.http?.retryDelayMs ?? 15000}" />
         </div>
       </div>
+      ${renderWaitWindow(t, sourceType)}
       <div class="field span-2">
         <label class="toggle"><span class="switch ${t.notifyOnFailure !== false ? 'on' : ''}" data-toggle="notifyOnFailure"></span> ${L("Avvisa via email/Telegram se il download fallisce dopo tutti i tentativi")}</label>
       </div>
@@ -1547,6 +1801,8 @@ function renderEditor() {
       <button class="btn btn-sm" id="btn-add-schedule">${escapeHtml(tr('addSchedule'))}</button>
     </div>
 
+    ${renderExceptionsCard(t)}
+
     <div class="card">
       <h3>${escapeHtml(tr('postActions'))} <span class="hint">${escapeHtml(tr('postActionsHint'))}</span></h3>
       <div id="actions-list">
@@ -1567,16 +1823,25 @@ function renderEditor() {
   bindEditorEvents();
 }
 
-function renderSettings() {
-  const root = document.getElementById('editor-root');
-  const s = state.settings || {};
-  const email = s.notifications?.email || {};
-  const telegram = s.notifications?.telegram || {};
-  const tgRecipients = Array.isArray(telegram.recipients) && telegram.recipients.length ? telegram.recipients : telegram.chatId ? [{ chatId: telegram.chatId, note: '' }] : [];
-  root.innerHTML = `
-    <div class="editor-header">
-      <div class="editor-title"><h2 style="margin:0">${L("Impostazioni")}</h2></div>
-    </div>
+// Settings tabs: the same names and order in every OnAir Garage app (apps/COMMON-FEATURES.md, 5.1), then the app's own
+// tabs right after General.
+const SETTINGS_TABS = ['general', 'reliability', 'alerts', 'categories', 'updates', 'backup', 'help'];
+
+function settingsTabLabel(id) {
+  return { general: L('Generali'), reliability: L('Affidabilità'), alerts: L('Avvisi'), categories: L('Categorie'), updates: L('Aggiornamenti'), backup: L('Backup'), help: L('Aiuto e informazioni') }[id];
+}
+
+function toggleRow(key, label, on, attr = 'data-setting-toggle') {
+  return `<div class="field span-2"><label class="toggle"><span class="switch ${on ? 'on' : ''}" ${attr}="${key}"></span> ${label}</label></div>`;
+}
+
+// password / token field with the show-hide button; it opens hidden every time the page is shown
+function secretField(attrs, value, placeholder = '') {
+  return `<div class="password-wrap"><input type="password" ${attrs} value="${escapeHtml(value || '')}" autocomplete="new-password" placeholder="${escapeHtml(placeholder)}" /><button type="button" class="btn btn-sm password-eye" data-toggle-password title="${escapeHtml(L("Mostra/nascondi password"))}">👁</button></div>`;
+}
+
+function settingsGeneralHtml(s) {
+  return `
     <div class="card">
       <h3>${escapeHtml(tr('general'))}</h3>
       <div class="field-grid">
@@ -1596,38 +1861,38 @@ function renderSettings() {
           </select>
         </div>
         <div class="field">
-          <label>${L("Icona barra menù")}</label>
-          <select id="setting-tray-style">
-            <option value="white" ${(s.trayIconStyle || 'white') === 'white' ? 'selected' : ''}>${L("Bianca (MacOs like)")}</option>
-            <option value="color" ${s.trayIconStyle === 'color' ? 'selected' : ''}>${L("Blu (colore del brand)")}</option>
-          </select>
-        </div>
-        <div class="field">
           <label>${L("Formato data e ora")}</label>
           <select id="setting-date-format">
-            <option value="auto" ${(s.formatPreset ?? (s.dateFormatStyle === 'en' ? 'us' : 'auto')) === 'auto' ? 'selected' : ''}>${L("Automatico (secondo la lingua: it/es 24 ore GG/MM/AAAA, en AM/PM MM/GG/AAAA)")}</option>
+            <option value="auto" ${(s.formatPreset ?? 'auto') === 'auto' ? 'selected' : ''}>${L("Automatico (secondo la lingua: it/es 24 ore GG/MM/AAAA, en AM/PM MM/GG/AAAA)")}</option>
             ${Object.entries(FORMAT_PRESETS)
-              .map(([k, p]) => `<option value="${k}" ${(s.formatPreset ?? (s.dateFormatStyle === 'en' ? 'us' : 'auto')) === k ? 'selected' : ''}>${escapeHtml(L(p.label))}</option>`)
+              .map(([k, p]) => `<option value="${k}" ${(s.formatPreset ?? 'auto') === k ? 'selected' : ''}>${escapeHtml(L(p.label))}</option>`)
               .join('')}
           </select>
           <div class="hint">${L("Vale per tutta l'interfaccia. I campi orario/data dell'editor delle pianificazioni cambiano dopo il riavvio dell'app.")}</div>
         </div>
+        <div class="field">
+          <label>${L("Nome di questa installazione (compare negli avvisi)")}</label>
+          <input type="text" id="setting-installation-name" maxlength="60" value="${escapeHtml(s.installationName || '')}" placeholder="${escapeHtml(L("es. Server sala regia"))}" />
+          <div class="hint">${L("Ogni avviso inizia con [G-Downloader · nome]: con più PC in studio si capisce quale scrive. Vuoto = nome del computer.")}</div>
+        </div>
       </div>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.startOnBoot ? 'on' : ''}" data-setting-toggle="startOnBoot"></span> ${L("Avvia G-Downloader all'accensione del computer")}</label>
+      <h4 class="settings-sub">${L("Uso non presidiato")}</h4>
+      ${toggleRow('startOnBoot', L("Avvia G-Downloader all'accensione del computer"), s.startOnBoot)}
+      ${toggleRow('startMinimized', L("Avvia ridotto a icona (nella tray)"), s.startMinimized)}
+      ${toggleRow('keepAwake', L("Tieni sveglio il computer finché l'app è aperta (impedisce la sospensione)"), s.keepAwake)}
+      <div class="field">
+        <label>${L("Icona barra menù")}</label>
+        <select id="setting-tray-style">
+          <option value="white" ${(s.trayIconStyle || 'white') === 'white' ? 'selected' : ''}>${L("Bianca (MacOs like)")}</option>
+          <option value="color" ${s.trayIconStyle === 'color' ? 'selected' : ''}>${L("Blu (colore del brand)")}</option>
+        </select>
       </div>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.startMinimized ? 'on' : ''}" data-setting-toggle="startMinimized"></span> ${L("Avvia ridotto a icona (nella tray)")}</label>
-      </div>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.notifyOnSuccess ? 'on' : ''}" data-setting-toggle="notifyOnSuccess"></span> ${L("Notifica quando un download va a buon fine")}</label>
-      </div>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.notifyOnError ? 'on' : ''}" data-setting-toggle="notifyOnError"></span> ${L("Notifica in caso di errore")}</label>
-      </div>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.openFolderOnNotificationClick ? 'on' : ''}" data-setting-toggle="openFolderOnNotificationClick"></span> ${L("Cliccando la notifica di successo, apri la cartella del file scaricato")}</label>
-      </div>
+      <div class="hint">${L("Chiudendo la finestra l'app resta nella tray (un solo avviso la prima volta); una seconda apertura mostra la finestra già aperta; dimensione e posizione della finestra vengono ricordate.")}</div>
+      <h4 class="settings-sub">${L("Notifiche")}</h4>
+      ${toggleRow('notifyOnSuccess', L("Notifica quando un download va a buon fine"), s.notifyOnSuccess)}
+      ${toggleRow('notifyOnError', L("Notifica in caso di errore"), s.notifyOnError)}
+      ${toggleRow('openFolderOnNotificationClick', L("Cliccando la notifica di successo, apri la cartella del file scaricato"), s.openFolderOnNotificationClick)}
+      <h4 class="settings-sub">${L("Nuovi task")}</h4>
       <div class="field span-2">
         <label>${L("Cartella di destinazione predefinita")}</label>
         <div class="inline-fields">
@@ -1646,13 +1911,14 @@ function renderSettings() {
         </div>
       </div>
       <div class="hint">${L("Valgono solo per i nuovi task creati da qui in poi; i task esistenti mantengono il proprio valore, modificabile nella scheda \"Sorgente\".")}</div>
-    </div>
+    </div>`;
+}
 
+function settingsReliabilityHtml(s) {
+  return `
     <div class="card">
       <h3>${L("Affidabilità")}</h3>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.checkMinFileSize ? 'on' : ''}" data-setting-toggle="checkMinFileSize"></span> ${L("Verifica che il file scaricato non sia troppo piccolo (tratta come errore e riprova)")}</label>
-      </div>
+      ${toggleRow('checkMinFileSize', L("Verifica che il file scaricato non sia troppo piccolo (tratta come errore e riprova)"), s.checkMinFileSize)}
       ${
         s.checkMinFileSize
           ? `<div class="field">
@@ -1661,14 +1927,10 @@ function renderSettings() {
             </div>`
           : ''
       }
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.warnIfUnchanged ? 'on' : ''}" data-setting-toggle="warnIfUnchanged"></span> ${L("Avvisa se il file scaricato è identico all'ultimo (possibile contenuto non aggiornato alla fonte)")}</label>
-      </div>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.watchdogMissedSchedules ? 'on' : ''}" data-setting-toggle="watchdogMissedSchedules"></span> ${L("Avvisa all'avvio se sono state saltate pianificazioni (app non attiva all'orario previsto)")}</label>
-      </div>
+      ${toggleRow('warnIfUnchanged', L("Avvisa se il file scaricato è identico all'ultimo (possibile contenuto non aggiornato alla fonte)"), s.warnIfUnchanged)}
+      ${toggleRow('watchdogMissedSchedules', L("Avvisa all'avvio se sono state saltate pianificazioni (app non attiva all'orario previsto)"), s.watchdogMissedSchedules)}
+      <div class="hint">${L("Per un file che la fonte pubblica in ritardo c'è, in ogni task, \"Attesa del file\" (scheda Sorgente).")}</div>
     </div>
-
     <div class="card">
       <h3>${L("Prestazioni e controlli")}</h3>
       <div class="field-grid">
@@ -1682,26 +1944,14 @@ function renderSettings() {
         </div>
       </div>
       <div class="hint">${L("L'avviso \"fonte ferma\" usa email/Telegram se attivi. I download in eccesso restano in attesa e partono appena se ne libera uno.")}</div>
-    </div>
+    </div>`;
+}
 
-    <div class="card">
-      <h3>${L("Aggiornamenti")}</h3>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.checkUpdates !== false ? 'on' : ''}" data-setting-toggle="checkUpdates"></span> ${L("Controlla automaticamente se esiste una nuova versione (avviso e download su richiesta, nessuna installazione automatica)")}</label>
-      </div>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${s.notifyNewVersion !== false ? 'on' : ''}" data-setting-toggle="notifyNewVersion"></span> ${L("Avvisami anche via email/Telegram quando esce una nuova versione (una sola volta per versione)")}</label>
-      </div>
-      <div class="btn-row">
-        <button class="btn" id="btn-check-updates">${L("Controlla aggiornamenti")}</button>
-        <button class="btn" id="btn-update-download" data-upd="download" style="display:none">${L("Scarica e installa")}</button>
-        <button class="btn btn-install" id="btn-update-install" data-upd="install" style="display:none"></button>
-        <button class="btn" id="btn-update-page" data-upd="page" style="display:none">${L("Apri pagina di download")}</button>
-      </div>
-      <span id="update-progress-settings" class="upd-progress upd-progress-settings" style="display:none"><i></i></span>
-      <span id="update-result" class="hint"></span>
-    </div>
-
+function settingsAlertsHtml(s) {
+  const email = s.notifications?.email || {};
+  const telegram = s.notifications?.telegram || {};
+  const recipients = Array.isArray(telegram.recipients) ? telegram.recipients : [];
+  return `
     <div class="card">
       <h3>${L("Report e log")}</h3>
       <div class="field-grid">
@@ -1718,65 +1968,36 @@ function renderSettings() {
           <input type="number" min="0" max="23" id="setting-report-hour" value="${s.reportHour ?? 7}" />
         </div>
       </div>
-      <div class="hint">${L("Usa la configurazione email qui sotto. Riepiloga i download completati/falliti nel periodo, con dettaglio errori.")}</div>
-      <div class="field span-2" style="margin-top:12px">
-        <label>${L("Log su file")}</label>
-        <div class="inline-fields">
-          <button class="btn btn-sm" id="btn-open-log-folder">${L("Apri cartella log")}</button>
-        </div>
-        <div class="hint">${L("Un file al giorno, conservato 30 giorni, oltre alla cronologia mostrata nell'app.")}</div>
-      </div>
+      <div class="hint">${L("Usa la configurazione email qui sotto. Riepiloga i download completati/falliti nel periodo, con dettaglio errori; i giorni saltati per un'eccezione di calendario non contano come falliti.")}</div>
     </div>
 
     <div class="card">
-      <h3>${L("Categorie e colori")}</h3>
-      <div class="hint">${L("Ogni categoria ha un colore assegnato in automatico, usato nell'elenco dei task, nel Palinsesto e nelle etichette. Cliccalo per sceglierne un altro, ↺ ripristina quello automatico.")}</div>
-      ${(() => {
-        const cats = [...new Set(state.tasks.map((x) => (x.category || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-        return cats.length
-          ? `<div class="cat-color-list">${cats
-              .map(
-                (c) => `<div class="cat-color-row">
-              <input type="color" value="${categoryColor(c)}" data-cat-color="${escapeHtml(c)}" title="${escapeHtml(L("Cambia colore"))}" />
-              <span class="cat-color-name">${escapeHtml(c)}</span>
-              <span class="hint">${state.tasks.filter((x) => (x.category || '').trim() === c).length} ${L('task')}</span>
-              <button type="button" class="btn btn-xs btn-ghost" data-cat-reset="${escapeHtml(c)}" title="${escapeHtml(L("Ripristina il colore automatico"))}">↺</button>
-            </div>`
-              )
-              .join('')}</div>`
-          : `<div class="hint">${L("Nessuna categoria: assegnane una ai task dal campo \"Categoria\".")}</div>`;
-      })()}
-    </div>
-
-    <div class="card">
-      <h3>${L("Notifica via email (download falliti)")}</h3>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${email.enabled ? 'on' : ''}" data-notif-toggle="email.enabled"></span> ${L("Abilita notifiche email")}</label>
-      </div>
+      <h3>${L("Avvisi via email")}</h3>
+      ${toggleRow('email.enabled', L("Abilita avvisi email"), email.enabled, 'data-notif-toggle')}
       <div class="field-grid">
         <div class="field"><label>${L("Server SMTP")}</label><input type="text" data-notif="email.host" value="${escapeHtml(email.host || '')}" placeholder="${escapeHtml(L("smtp.esempio.com"))}" /></div>
         <div class="field"><label>${L("Porta")}</label><input type="number" data-notif="email.port" value="${email.port ?? 587}" /></div>
-        <div class="field"><label class="toggle"><span class="switch ${email.secure ? 'on' : ''}" data-notif-toggle="email.secure"></span> ${L("Connessione sicura (SSL/TLS)")}</label></div>
-        <div class="field"><label>${L("Utente SMTP")}</label><input type="text" data-notif="email.user" value="${escapeHtml(email.user || '')}" /></div>
-        <div class="field"><label>${L("Password SMTP")}</label><div class="password-wrap"><input type="password" data-notif="email.pass" value="${escapeHtml(email.pass || '')}" autocomplete="new-password" /><button type="button" class="btn btn-sm password-eye" data-toggle-password title="${escapeHtml(L("Mostra/nascondi password"))}">👁</button></div></div>
+        <div class="field"><label class="toggle"><span class="switch ${email.secure ? 'on' : ''}" data-notif-toggle="email.secure"></span> ${L("Connessione cifrata fin dall'inizio (SSL/TLS, di solito porta 465)")}</label>
+          <div class="hint">${L("Spenta: la connessione si cifra con STARTTLS (di solito porta 587). Con un utente la connessione deve essere cifrata: la password non viaggia mai in chiaro.")}</div></div>
+        <div class="field"><label>${L("Utente SMTP")}</label><input type="text" data-notif="email.user" value="${escapeHtml(email.user || '')}" autocomplete="off" /></div>
+        <div class="field"><label>${L("Password SMTP")}</label>${secretField('data-notif="email.pass"', email.pass)}</div>
         <div class="field"><label>${L("Mittente")}</label><input type="text" data-notif="email.from" value="${escapeHtml(email.from || '')}" placeholder="${escapeHtml(L("downloader@tuodominio.it"))}" /></div>
-        <div class="field span-2"><label>${L("Destinatari (separati da virgola)")}</label><input type="text" data-notif="email.to" value="${escapeHtml(email.to || '')}" placeholder="${escapeHtml(L("anna@example.com, mario@example.com"))}" /></div>
+        <div class="field span-2"><label>${L("Destinatari (separati da virgola, spazio o a capo)")}</label><input type="text" data-notif-list="email.recipients" value="${escapeHtml((email.recipients || []).join(', '))}" placeholder="${escapeHtml(L("anna@example.com, mario@example.com"))}" />
+          <div class="hint">${L("Un solo messaggio per tutti, con i destinatari in copia nascosta (Bcc): nessuno vede gli indirizzi degli altri. Al massimo 20.")}</div></div>
       </div>
       <button class="btn btn-sm" id="btn-test-email">${L("Invia email di prova")}</button>
       <span id="email-test-result" class="hint"></span>
     </div>
 
     <div class="card">
-      <h3>${L("Notifica via Telegram (download falliti)")}</h3>
-      <div class="field span-2">
-        <label class="toggle"><span class="switch ${telegram.enabled ? 'on' : ''}" data-notif-toggle="telegram.enabled"></span> ${L("Abilita notifiche Telegram")}</label>
-      </div>
+      <h3>${L("Avvisi via Telegram")}</h3>
+      ${toggleRow('telegram.enabled', L("Abilita avvisi Telegram"), telegram.enabled, 'data-notif-toggle')}
       <div class="field-grid">
-        <div class="field"><label>${L("Bot Token")}</label><input type="text" data-notif="telegram.botToken" value="${escapeHtml(telegram.botToken || '')}" placeholder="123456:ABC-DEF..." /></div>
+        <div class="field"><label>${L("Bot Token")}</label>${secretField('data-notif="telegram.botToken"', telegram.botToken, '123456:ABC-DEF...')}</div>
       </div>
       <label class="field-label">${L("Destinatari")}</label>
       <div id="telegram-recipients">
-        ${tgRecipients
+        ${recipients
           .map(
             (r, i) => `<div class="inline-fields" style="margin-bottom:6px">
               <input type="text" data-tg-chat="${i}" value="${escapeHtml(r.chatId || '')}" placeholder="${escapeHtml(L("Chat ID (es. 123456789 o -1001234567890)"))}" />
@@ -1809,202 +2030,355 @@ function renderSettings() {
           <b>${L("Se il bot è già usato da altri programmi (es. Home Assistant)")}</b>${L(": hanno il loro webhook e la ricerca degli update da browser non funziona (errore 409). Non toglierlo: usa @userinfobot per i Chat ID. G-Downloader invia soltanto e non disturba gli altri programmi.")}
         </div>
       </details>
-      <div class="hint">${L("Ogni destinatario riceve gli avvisi. Usa la nota per ricordare chi è.")}</div>
+      <div class="hint">${L("Ogni destinatario riceve gli avvisi. Usa la nota per ricordare chi è. Telegram viene contattato solo se questa opzione è attiva.")}</div>
       <button class="btn btn-sm" id="btn-test-telegram">${L("Invia messaggio di prova")}</button>
       <span id="telegram-test-result" class="hint"></span>
-    </div>
+    </div>`;
+}
 
+function settingsCategoriesHtml() {
+  const cats = [...new Map(state.tasks.map((x) => [(x.category || '').trim().toLowerCase(), (x.category || '').trim()]).filter(([k]) => k)).values()].sort((a, b) => a.localeCompare(b));
+  return `
     <div class="card">
-      <h3>${L("Backup / Trasferimento su un altro PC")}</h3>
-      <div class="hint">${L("Esporta task e impostazioni in un file, da riportare identico su un altro computer con Importa configurazione. Il file contiene anche eventuali password SMTP e token Telegram salvati: conservalo in un posto sicuro.")}</div>
-      <div class="inline-fields" style="margin-top:8px">
-        <button class="btn" id="btn-export-config">${L("Esporta configurazione")}</button>
-        <button class="btn" id="btn-import-config">${L("Importa configurazione")}</button>
-      </div>
-      <span id="config-transfer-result" class="hint"></span>
-    </div>
-  `;
+      <h3>${L("Categorie e colori")}</h3>
+      <div class="hint">${L("Ogni categoria ha un colore assegnato in automatico, usato nell'elenco dei task, nel Palinsesto e nelle etichette. Cliccalo per sceglierne un altro, ↺ ripristina quello automatico. Rinomina cambia il nome in tutti i task (se esiste già, le due categorie si uniscono); Elimina chiede dove spostare i task.")}</div>
+      ${
+        cats.length
+          ? `<div class="cat-color-list">${cats
+              .map(
+                (c) => `<div class="cat-color-row">
+              <input type="color" value="${categoryColor(c)}" data-cat-color="${escapeHtml(c)}" title="${escapeHtml(L("Cambia colore"))}" />
+              <span class="cat-color-name">${escapeHtml(c)}</span>
+              <span class="hint">${state.tasks.filter((x) => (x.category || '').trim().toLowerCase() === c.toLowerCase()).length} ${L('task')}</span>
+              <button type="button" class="btn btn-xs btn-ghost" data-cat-reset="${escapeHtml(c)}" title="${escapeHtml(L("Ripristina il colore automatico"))}">↺</button>
+              <button type="button" class="btn btn-xs" data-cat-rename="${escapeHtml(c)}">${L("Rinomina")}</button>
+              <button type="button" class="btn btn-xs btn-danger" data-cat-delete="${escapeHtml(c)}">${L("Elimina")}</button>
+            </div>`
+              )
+              .join('')}</div>
+            <span id="cat-result" class="hint"></span>`
+          : `<div class="hint">${L("Nessuna categoria: assegnane una ai task dal campo \"Categoria\".")}</div>`
+      }
+    </div>`;
+}
 
+function settingsUpdatesHtml(s) {
+  return `
+    <div class="card">
+      <h3>${L("Aggiornamenti")}</h3>
+      ${toggleRow('checkUpdates', L("Controlla automaticamente se esiste una nuova versione (avviso e download su richiesta, nessuna installazione automatica)"), s.checkUpdates !== false)}
+      ${toggleRow('updateAlert', L("Avvisami anche via email/Telegram quando esce una nuova versione (una sola volta per versione)"), s.updateAlert !== false)}
+      <div class="hint">${L("Il controllo avviene 15 secondi dopo l'avvio e poi ogni 24 ore. Si contatta solo la pagina delle release di G-Downloader su GitHub.")}</div>
+      <div class="btn-row">
+        <button class="btn" id="btn-check-updates">${L("Controlla ora")}</button>
+      </div>
+      <div class="hint" id="update-last-check"></div>
+      <div id="update-box"></div>
+      <span id="update-result" class="hint"></span>
+    </div>`;
+}
+
+function settingsBackupHtml() {
+  return `
+    <div class="card">
+      <h3>${L("Backup configurazione")}</h3>
+      <div class="hint">${L("Esporta o importa task, impostazioni, categorie e colori. Utile per portare la configurazione su un altro computer. Non contiene la cronologia dei download né i log.")}</div>
+      <div class="field span-2" style="margin-top:10px">
+        <label class="toggle"><input type="checkbox" id="backup-include-secrets" /> ${L("Includi password e token")}</label>
+      </div>
+      <div class="hint" id="backup-secrets-warning" style="display:none;color:var(--err)">${L("Attenzione: il file conterrà password e token in chiaro (SMTP, Telegram, password dei server e indirizzi con credenziali). Conservalo in un posto sicuro e non condividerlo.")}</div>
+      <div class="hint" id="backup-secrets-note">${L("Spento (consigliato): password e token restano fuori dal file e, dopo l'importazione, l'app ti elenca quelli da riscrivere.")}</div>
+      <div class="inline-fields" style="margin-top:8px">
+        <button class="btn" id="btn-export-config">${L("Esporta")}</button>
+        <select id="backup-import-mode">
+          <option value="replace">${L("Importa: sostituisci tutto")}</option>
+          <option value="add">${L("Importa: aggiungi solo i task mancanti")}</option>
+        </select>
+        <button class="btn" id="btn-import-config">${L("Importa")}</button>
+      </div>
+      <div class="hint">${L("Sostituisci tutto: impostazioni e task diventano quelli del file. Aggiungi solo i mancanti: i task che questo PC non ha vengono aggiunti, spenti; impostazioni e task esistenti restano come sono. Una password che il file non contiene resta quella di questo PC, solo per lo stesso server e utente. Se il file esegue programmi, ti viene chiesto prima di importare.")}</div>
+      <span id="config-transfer-result" class="hint"></span>
+      <div id="config-missing"></div>
+    </div>`;
+}
+
+function settingsHelpHtml() {
+  return `
+    <div class="card">
+      <h3>${L("Aiuto e informazioni")}</h3>
+      <div class="hint">${L("Versione, licenza, collegamenti, informazioni per l'assistenza e cartella dei log sono nella pagina Aiuto e informazioni.")}</div>
+      <div class="btn-row"><button class="btn" id="btn-open-help-page">${L("Apri Aiuto e informazioni")}</button></div>
+    </div>`;
+}
+
+function renderSettings() {
+  const root = document.getElementById('editor-root');
+  const s = state.settings || {};
+  const tab = SETTINGS_TABS.includes(state.settingsTab) ? state.settingsTab : 'general';
+  const body = { general: () => settingsGeneralHtml(s), reliability: () => settingsReliabilityHtml(s), alerts: () => settingsAlertsHtml(s), categories: settingsCategoriesHtml, updates: () => settingsUpdatesHtml(s), backup: settingsBackupHtml, help: settingsHelpHtml }[tab]();
+  root.innerHTML = `
+    <div class="editor-header">
+      <div class="editor-title"><h2 style="margin:0">${L("Impostazioni")}</h2></div>
+    </div>
+    <div class="settings-tabs" role="tablist">
+      ${SETTINGS_TABS.map((id) => `<button type="button" role="tab" class="settings-tab ${id === tab ? 'active' : ''}" data-settings-tab="${id}">${escapeHtml(settingsTabLabel(id))}</button>`).join('')}
+    </div>
+    ${body}`;
+
+  root.querySelectorAll('[data-settings-tab]').forEach((el) =>
+    el.addEventListener('click', () => {
+      state.settingsTab = el.dataset.settingsTab;
+      renderSettings();
+    })
+  );
+  bindSettings(root, tab);
+}
+
+// Looks for an element only in the tab that is shown.
+function onSettings(id, evt, fn) {
+  document.getElementById(id)?.addEventListener(evt, fn);
+}
+
+async function patchSettings(patch) {
+  state.settings = await window.api.settings.update(patch);
+  return state.settings;
+}
+
+function bindSettings(root, tab) {
   root.querySelectorAll('[data-setting-toggle]').forEach((el) => {
     el.addEventListener('click', async () => {
-      const key = el.dataset.settingToggle;
-      const next = { [key]: !el.classList.contains('on') };
-      state.settings = await window.api.settings.update(next);
+      await patchSettings({ [el.dataset.settingToggle]: !el.classList.contains('on') });
       renderSettings();
     });
   });
-  document.getElementById('setting-theme-mode').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ themeMode: e.target.value });
+  onSettings('setting-theme-mode', 'change', async (e) => {
+    await patchSettings({ themeMode: e.target.value });
     applyTheme(state.settings.themeMode);
   });
-  document.getElementById('setting-tray-style').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ trayIconStyle: e.target.value });
-  });
-  document.getElementById('setting-date-format').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ formatPreset: e.target.value });
+  onSettings('setting-tray-style', 'change', (e) => patchSettings({ trayIconStyle: e.target.value }));
+  onSettings('setting-date-format', 'change', async (e) => {
+    await patchSettings({ formatPreset: e.target.value });
     renderSidebar();
     renderNextWidget();
     tickClock();
   });
-  document.getElementById('setting-language').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ language: e.target.value });
+  onSettings('setting-language', 'change', async (e) => {
+    await patchSettings({ language: e.target.value });
     applyStaticTranslations();
     renderSidebar();
     renderNextWidget();
     renderSettings();
   });
-  document.getElementById('setting-default-dest').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ defaultDestination: e.target.value });
-  });
-  document.getElementById('btn-pick-default-folder').addEventListener('click', async () => {
+  onSettings('setting-installation-name', 'change', (e) => patchSettings({ installationName: e.target.value }));
+  onSettings('setting-default-dest', 'change', (e) => patchSettings({ defaultDestination: e.target.value }));
+  onSettings('btn-pick-default-folder', 'click', async () => {
     const folder = await window.api.dialogs.pickFolder();
     if (folder) {
       document.getElementById('setting-default-dest').value = folder;
-      state.settings = await window.api.settings.update({ defaultDestination: folder });
+      await patchSettings({ defaultDestination: folder });
     }
   });
-  document.getElementById('setting-default-retries').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ defaultRetries: Number(e.target.value) });
+  onSettings('setting-default-retries', 'change', (e) => patchSettings({ defaultRetries: Number(e.target.value) }));
+  onSettings('setting-default-retry-delay', 'change', (e) => patchSettings({ defaultRetryDelayMs: Number(e.target.value) }));
+  onSettings('setting-max-parallel', 'change', (e) => patchSettings({ maxParallelDownloads: Math.max(0, Number(e.target.value) || 0) }));
+  onSettings('setting-stale-runs', 'change', (e) => patchSettings({ staleAlertRuns: Math.max(0, Number(e.target.value) || 0) }));
+  onSettings('setting-min-file-size', 'change', (e) => patchSettings({ minFileSizeKB: Number(e.target.value) }));
+  onSettings('setting-report-frequency', 'change', (e) => patchSettings({ reportFrequency: e.target.value }));
+  onSettings('setting-report-hour', 'change', (e) => patchSettings({ reportHour: Number(e.target.value) }));
+
+  if (tab === 'updates') bindUpdatesTab();
+  if (tab === 'categories') bindCategoriesTab(root);
+  if (tab === 'alerts') bindAlertsTab(root);
+  if (tab === 'backup') bindBackupTab();
+  onSettings('btn-open-help-page', 'click', () => {
+    state.mode = 'about';
+    state.selectedId = null;
+    renderSidebar();
+    renderEditor();
   });
-  document.getElementById('setting-default-retry-delay').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ defaultRetryDelayMs: Number(e.target.value) });
-  });
-  document.getElementById('setting-max-parallel').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ maxParallelDownloads: Math.max(0, Number(e.target.value) || 0) });
-  });
-  document.getElementById('setting-stale-runs').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ staleAlertRuns: Math.max(0, Number(e.target.value) || 0) });
-  });
-  document.getElementById('btn-check-updates').addEventListener('click', async () => {
+}
+
+function bindUpdatesTab() {
+  paintUpdate();
+  paintLastCheck();
+  onSettings('btn-check-updates', 'click', async () => {
     if (upd.state === 'downloading') return;
     const out = document.getElementById('update-result');
     out.style.color = '';
     out.textContent = L('Controllo in corso…');
     const info = await window.api.updates.check();
+    upd.lastCheck = info.state?.lastCheck || upd.lastCheck;
+    paintLastCheck();
     if (!info.ok) {
       // a failed check leaves a downloaded installer usable
       if (upd.state === 'ready') paintUpdate();
-      else {
-        out.style.color = 'var(--err)';
-        out.textContent = L('Controllo non riuscito: ') + info.error;
-      }
+      out.style.color = 'var(--err)';
+      out.textContent = L('Controllo non riuscito: ') + info.error;
     } else if (info.available) {
+      out.textContent = '';
       showUpdateBanner(info);
       paintUpdate();
     } else {
       out.style.color = 'var(--ok)';
-      out.textContent = L('Sei aggiornato (versione {current}) ✓', { current: info.current }) + (info.note ? ' ' + info.note + '.' : '');
+      out.textContent = L('Sei aggiornato (versione {current}) ✓', { current: info.current }) + (info.noRelease ? ' ' + L('Nessuna release pubblicata') + '.' : '');
     }
   });
-  paintUpdate();
-  const minFileSizeInput = document.getElementById('setting-min-file-size');
-  if (minFileSizeInput) {
-    minFileSizeInput.addEventListener('change', async (e) => {
-      state.settings = await window.api.settings.update({ minFileSizeKB: Number(e.target.value) });
-    });
-  }
+}
+
+function bindCategoriesTab(root) {
   const saveCategoryColor = async (name, color) => {
     const colors = { ...(state.settings.categoryColors || {}) };
     if (color) colors[name] = color;
     else delete colors[name];
-    state.settings = await window.api.settings.update({ categoryColors: colors });
+    await patchSettings({ categoryColors: colors });
     renderSidebar();
     renderSettings();
   };
-  root.querySelectorAll('[data-cat-color]').forEach((el) => {
-    el.addEventListener('change', () => saveCategoryColor(el.dataset.catColor, el.value));
-  });
-  root.querySelectorAll('[data-cat-reset]').forEach((el) => {
-    el.addEventListener('click', () => saveCategoryColor(el.dataset.catReset, null));
-  });
-  document.getElementById('setting-report-frequency').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ reportFrequency: e.target.value });
-  });
-  document.getElementById('setting-report-hour').addEventListener('change', async (e) => {
-    state.settings = await window.api.settings.update({ reportHour: Number(e.target.value) });
-  });
-  document.getElementById('btn-open-log-folder').addEventListener('click', () => {
-    window.api.system.openLogFolder();
-  });
+  root.querySelectorAll('[data-cat-color]').forEach((el) => el.addEventListener('change', () => saveCategoryColor(el.dataset.catColor, el.value)));
+  root.querySelectorAll('[data-cat-reset]').forEach((el) => el.addEventListener('click', () => saveCategoryColor(el.dataset.catReset, null)));
+  const after = async (res, message) => {
+    if (!res.ok) {
+      alert(res.error || 'error');
+      return;
+    }
+    state.settings = res.settings;
+    await loadTasks();
+    renderSidebar();
+    renderSettings();
+    const out = document.getElementById('cat-result');
+    if (out) out.textContent = message;
+  };
+  root.querySelectorAll('[data-cat-rename]').forEach((el) =>
+    el.addEventListener('click', async () => {
+      const from = el.dataset.catRename;
+      const to = prompt(L('Nuovo nome per la categoria "{name}" (se esiste già, le due categorie si uniscono):', { name: from }), from);
+      if (to === null || !to.trim() || to.trim() === from) return;
+      const res = await window.api.categories.rename(from, to.trim());
+      await after(res, res.merged ? L('Categorie unite: {n} task spostati.', { n: res.count }) : L('Categoria rinominata in {n} task.', { n: res.count }));
+    })
+  );
+  root.querySelectorAll('[data-cat-delete]').forEach((el) =>
+    el.addEventListener('click', () => {
+      const name = el.dataset.catDelete;
+      const others = [...new Set(state.tasks.map((x) => (x.category || '').trim()).filter((c) => c && c.toLowerCase() !== name.toLowerCase()))].sort((a, b) => a.localeCompare(b));
+      openModal(`
+        <h3>${escapeHtml(L('Elimina la categoria "{name}"', { name }))}</h3>
+        <p>${escapeHtml(L('I task di questa categoria non vengono eliminati. Dove li sposto?'))}</p>
+        <div class="field"><select id="cat-move-to">
+          <option value="">${escapeHtml(L('Nessuna categoria'))}</option>
+          ${others.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+        </select></div>
+        <div class="btn-row"><button class="btn btn-danger" id="cat-delete-ok">${escapeHtml(L('Elimina categoria'))}</button><button class="btn" data-close-app-modal>${escapeHtml(L('Annulla'))}</button></div>`);
+      document.getElementById('cat-delete-ok').addEventListener('click', async () => {
+        const moveTo = document.getElementById('cat-move-to').value;
+        closeModal();
+        const res = await window.api.categories.remove(name, moveTo);
+        await after(res, L('Categoria eliminata: {n} task spostati.', { n: res.count }));
+      });
+    })
+  );
+}
 
+function bindAlertsTab(root) {
   async function patchNotifications(path, value) {
     const notifications = JSON.parse(JSON.stringify(state.settings.notifications || {}));
     setPath(notifications, path, value);
-    state.settings = await window.api.settings.update({ notifications });
-    return notifications;
+    await patchSettings({ notifications });
+    return state.settings.notifications;
   }
-
-  root.querySelectorAll('[data-notif-toggle]').forEach((el) => {
+  root.querySelectorAll('[data-notif-toggle]').forEach((el) =>
     el.addEventListener('click', async () => {
       await patchNotifications(el.dataset.notifToggle, !el.classList.contains('on'));
       renderSettings();
-    });
-  });
-
-  root.querySelectorAll('[data-notif]').forEach((el) => {
+    })
+  );
+  root.querySelectorAll('[data-notif]').forEach((el) =>
     el.addEventListener('change', async () => {
-      const value = el.type === 'number' ? Number(el.value) : el.value;
-      await patchNotifications(el.dataset.notif, value);
-    });
-  });
-
-  const saveRecipients = async (list) => {
-    await patchNotifications('telegram.recipients', list);
-    await patchNotifications('telegram.chatId', '');
-  };
+      await patchNotifications(el.dataset.notif, el.type === 'number' ? Number(el.value) : el.value);
+    })
+  );
+  root.querySelectorAll('[data-notif-list]').forEach((el) =>
+    el.addEventListener('change', async () => {
+      await patchNotifications(el.dataset.notifList, el.value.split(/[\s,;]+/).filter(Boolean));
+      renderSettings();
+    })
+  );
+  const current = () => state.settings.notifications?.telegram?.recipients || [];
   const readRecipients = () =>
-    tgRecipients.map((r, i) => ({
+    current().map((r, i) => ({
       chatId: root.querySelector(`[data-tg-chat="${i}"]`)?.value.trim() ?? r.chatId,
       note: root.querySelector(`[data-tg-note="${i}"]`)?.value.trim() ?? r.note
     }));
-  root.querySelectorAll('[data-tg-chat],[data-tg-note]').forEach((el) => {
-    el.addEventListener('change', () => saveRecipients(readRecipients()));
-  });
-  root.querySelectorAll('[data-tg-remove]').forEach((el) => {
+  // an empty row is kept while it is being typed: the settings drop it, the screen does not
+  const saveRecipients = async (list) => patchNotifications('telegram.recipients', list);
+  root.querySelectorAll('[data-tg-chat],[data-tg-note]').forEach((el) => el.addEventListener('change', () => saveRecipients(readRecipients())));
+  root.querySelectorAll('[data-tg-remove]').forEach((el) =>
     el.addEventListener('click', async () => {
       await saveRecipients(readRecipients().filter((_, i) => i !== Number(el.dataset.tgRemove)));
       renderSettings();
-    });
-  });
-  document.getElementById('btn-add-tg-recipient').addEventListener('click', async () => {
-    await saveRecipients([...readRecipients(), { chatId: '', note: '' }]);
+    })
+  );
+  onSettings('btn-add-tg-recipient', 'click', async () => {
+    const list = [...readRecipients(), { chatId: '', note: '' }];
+    // the settings keep only rows with a chat ID, so show the empty row without saving it
+    const tg = state.settings.notifications.telegram;
+    tg.recipients = list;
     renderSettings();
   });
-
-  document.getElementById('btn-test-email').addEventListener('click', async () => {
+  onSettings('btn-test-email', 'click', async () => {
     const out = document.getElementById('email-test-result');
     out.textContent = L('Invio in corso…');
     const result = await window.api.notifications.testEmail(state.settings.notifications.email);
     out.textContent = result.ok ? L('✓ Email inviata') : `✕ ${result.error}`;
   });
-
-  document.getElementById('btn-test-telegram').addEventListener('click', async () => {
+  onSettings('btn-test-telegram', 'click', async () => {
     const out = document.getElementById('telegram-test-result');
     out.textContent = L('Invio in corso…');
     const result = await window.api.notifications.testTelegram(state.settings.notifications.telegram);
     out.textContent = result.ok ? L('✓ Messaggio inviato a tutti i destinatari') : `✕ ${result.error}`;
   });
+}
 
-  document.getElementById('btn-export-config').addEventListener('click', async () => {
+function missingSecretLabel(m) {
+  const kind = { 'email.pass': L('Password SMTP (avvisi email)'), 'telegram.botToken': L('Bot Token Telegram'), 'task-auth': L('Password del server'), url: L('Indirizzo con utente e password'), header: L('Intestazione con chiave o token') }[m.kind] || m.kind;
+  return m.name ? `${kind} — ${m.name}` : kind;
+}
+
+function bindBackupTab() {
+  const box = document.getElementById('backup-include-secrets');
+  const sync = () => {
+    document.getElementById('backup-secrets-warning').style.display = box.checked ? '' : 'none';
+    document.getElementById('backup-secrets-note').style.display = box.checked ? 'none' : '';
+  };
+  box.addEventListener('change', sync);
+  sync();
+  onSettings('btn-export-config', 'click', async () => {
     const out = document.getElementById('config-transfer-result');
-    const result = await window.api.config.export();
+    const result = await window.api.config.export({ includeSecrets: box.checked });
     if (result.canceled) return;
-    out.textContent = result.ok ? L('✓ Salvato in {path}', { path: result.filePath }) : `✕ ${result.error}`;
+    out.style.color = result.ok ? '' : 'var(--err)';
+    out.textContent = result.ok ? L('✓ Salvato in {path}', { path: result.filePath }) + (result.includesSecrets ? ' — ' + L('contiene password e token in chiaro') : '') : `✕ ${result.error}`;
   });
-
-  document.getElementById('btn-import-config').addEventListener('click', async () => {
+  onSettings('btn-import-config', 'click', async () => {
     const out = document.getElementById('config-transfer-result');
-    const result = await window.api.config.import();
+    const list = document.getElementById('config-missing');
+    const result = await window.api.config.import({ mode: document.getElementById('backup-import-mode').value });
     if (result.canceled) return;
-    if (result.ok) {
-      out.textContent = L('✓ Importati {n} task e impostazioni', { n: result.tasksCount });
-      state.settings = result.settings;
-      applyTheme(state.settings.themeMode);
-      await loadTasks();
-      renderSidebar();
-      renderSettings();
-    } else {
+    list.innerHTML = '';
+    if (!result.ok) {
+      out.style.color = 'var(--err)';
       out.textContent = `✕ ${result.error}`;
+      return;
+    }
+    out.style.color = '';
+    out.textContent = result.mode === 'add' ? L('✓ Aggiunti {n} task (spenti)', { n: result.added }) : L('✓ Importati {n} task e impostazioni', { n: result.tasksCount });
+    state.settings = result.settings;
+    applyTheme(state.settings.themeMode);
+    applyStaticTranslations();
+    await loadTasks();
+    renderSidebar();
+    if (result.missing?.length) {
+      list.innerHTML = `<div class="hint" style="color:var(--warn);margin-top:8px"><b>${escapeHtml(L('Da riscrivere (non erano nel file):'))}</b><ul>${result.missing.map((m) => `<li>${escapeHtml(missingSecretLabel(m))}</li>`).join('')}</ul></div>`;
     }
   });
 }
@@ -2012,27 +2386,60 @@ function renderSettings() {
 async function renderAbout() {
   const root = document.getElementById('editor-root');
   if (!state.appInfo) state.appInfo = await window.api.app.info();
+  const info = state.appInfo;
   const lang = state.settings?.language || 'it';
   const guide = GUIDE_CONTENT[lang] || GUIDE_CONTENT.it;
 
   root.innerHTML = `
     <div class="editor-header">
-      <div class="editor-title"><h2 style="margin:0">${L("Info e Guida")}</h2></div>
+      <div class="editor-title"><h2 style="margin:0">${L("Aiuto e informazioni")}</h2></div>
     </div>
 
     <div class="card about-card">
       <img src="../assets/icon.png" alt="G-Downloader" class="about-icon" />
       <div>
-        <div class="about-name">${escapeHtml(state.appInfo.name)}</div>
-        <div class="about-version">${L('Versione')} ${escapeHtml(state.appInfo.version)}</div>
-        <div class="hint">Electron ${escapeHtml(state.appInfo.electron)} · Node ${escapeHtml(state.appInfo.node)} · ${escapeHtml(state.appInfo.platform)}</div>
+        <div class="about-name">${escapeHtml(info.name)}</div>
+        <div class="about-version">${L('Versione')} ${escapeHtml(info.version)}</div>
+        <div class="hint">Electron ${escapeHtml(info.electron)} · Node ${escapeHtml(info.node)} · ${escapeHtml(info.platform)} ${escapeHtml(info.arch || '')}</div>
+        <div class="hint">${L("Licenza MIT · © 2026 Graziano Melzi, OnAir Garage")}</div>
       </div>
     </div>
 
     <div class="card">
-      <h3>${L("Sviluppatore")}</h3>
-      <p>Graziano Melzi · OnAir Garage</p>
-      <p class="hint">hello@onairgarage.com · <a href="#" id="about-site-link">onairgarage.com</a></p>
+      <h3>${L("Assistenza")}</h3>
+      <div class="btn-row">
+        <button class="btn" id="btn-copy-support">${L("Copia info per assistenza")}</button>
+        <button class="btn" id="btn-open-logs">${L("Apri cartella log")}</button>
+        <button class="btn" id="btn-about-check-updates">${L("Controlla aggiornamenti")}</button>
+      </div>
+      <span class="hint" id="about-result"></span>
+      <div class="hint">${L("Le info per l'assistenza contengono versione, sistema, lingua, nome dell'installazione, ultimo controllo aggiornamenti e ultimo errore: mai impostazioni, indirizzi, password o nomi di file.")}</div>
+      <div class="hint">${L("Log: un file al giorno in una cartella dell'app, al massimo 5 MB ciascuno, gli ultimi 7 giorni.")}</div>
+    </div>
+
+    <div class="card">
+      <h3>${L("Collegamenti")}</h3>
+      <ul class="about-links">
+        <li><a href="#" data-about-link="https://onairgarage.com/tools/g-downloader/">onairgarage.com/tools/g-downloader</a></li>
+        <li><a href="#" data-about-link="release">${L("Pagina delle release (note di rilascio e installer)")}</a></li>
+        <li><a href="#" data-about-link="mailto:hello@onairgarage.com">hello@onairgarage.com</a></li>
+        <li><a href="#" data-about-link="https://onairgarage.com">onairgarage.com</a></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>${L("Privacy")}</h3>
+      <p>${L("G-Downloader contatta solo: le sorgenti dei tuoi task; GitHub (pagina delle release di questo programma) per il controllo degli aggiornamenti, se attivo; il server email e Telegram, solo se li hai attivati. Non invia statistiche e non ha account.")}</p>
+    </div>
+
+    <div class="card">
+      <h3>${L("Componenti open source")}</h3>
+      <p class="hint">Electron (MIT) · electron-store (MIT) · nodemailer (MIT-0) · basic-ftp (MIT) · cron-parser (MIT) · date-fns (MIT)</p>
+    </div>
+
+    <div class="card">
+      <h3>${L("Primo avvio: app non firmata")}</h3>
+      <p>${L("L'app è gratuita e non è firmata digitalmente. Windows: se compare SmartScreen, clicca \"Ulteriori informazioni\" e poi \"Esegui comunque\". macOS: se compare \"app danneggiata\" o non si apre, clic destro sull'app → Apri, oppure nel Terminale: xattr -dr com.apple.quarantine /Applications/G-Downloader.app")}</p>
     </div>
 
     <div class="card">
@@ -2047,19 +2454,38 @@ async function renderAbout() {
       </div>
       ${guide.sections
         .map(
-          (s) => `
+          (sec) => `
         <div class="guide-section">
-          <h4>${escapeHtml(s.h)}</h4>
-          <p>${s.p}</p>
+          <h4>${escapeHtml(sec.h)}</h4>
+          <p>${sec.p}</p>
         </div>`
         )
         .join('')}
     </div>
   `;
 
-  document.getElementById('about-site-link').addEventListener('click', (e) => {
-    e.preventDefault();
-    window.api.updates.open('https://onairgarage.com');
+  root.querySelectorAll('[data-about-link]').forEach((el) =>
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = el.dataset.aboutLink;
+      window.api.updates.open(target === 'release' ? upd.info?.url || '' : target);
+    })
+  );
+  document.getElementById('btn-copy-support').addEventListener('click', async () => {
+    const r = await window.api.support.copyInfo();
+    document.getElementById('about-result').textContent = r.ok ? L('✓ Copiato negli appunti') : '';
+  });
+  document.getElementById('btn-open-logs').addEventListener('click', () => window.api.system.openLogFolder());
+  document.getElementById('btn-about-check-updates').addEventListener('click', async () => {
+    const out = document.getElementById('about-result');
+    out.textContent = L('Controllo in corso…');
+    const res = await window.api.updates.check();
+    upd.lastCheck = res.state?.lastCheck || upd.lastCheck;
+    if (!res.ok) out.textContent = L('Controllo non riuscito: ') + res.error;
+    else if (res.available) {
+      showUpdateBanner(res);
+      out.textContent = L('Nuova versione {latest} disponibile (installata: {current}).', { latest: res.latest, current: res.current });
+    } else out.textContent = L('Sei aggiornato (versione {current}) ✓', { current: res.current });
   });
   document.getElementById('guide-language-select').addEventListener('change', async (e) => {
     state.settings = await window.api.settings.update({ language: e.target.value });
@@ -2116,7 +2542,7 @@ function bindEditorEvents() {
     el.addEventListener('click', () => {
       const path = el.dataset.toggle;
       const current = getPath(state.editing, path);
-      const next = path === 'preDownloadSafe' ? !current : !(current !== false); // this one is off unless set
+      const next = path === 'preDownloadSafe' || path === 'waitWindow.enabled' ? !current : !(current !== false); // these are off unless set
       setPath(state.editing, path, next);
       const scheduleEnableMatch = path.match(/^schedules\.(\d+)\.enabled$/);
       if (scheduleEnableMatch && next) rearmSchedule(state.editing.schedules[Number(scheduleEnableMatch[1])]);
@@ -2201,7 +2627,7 @@ function bindEditorEvents() {
       }
       box.style.display = 'block';
       box.innerHTML = `<div class="hint">${L("Calcolo in corso…")}</div>`;
-      const times = await window.api.schedules.preview(state.editing.schedules[idx]);
+      const times = await window.api.schedules.preview(state.editing.schedules[idx], state.editing.exceptions || []);
       box.innerHTML = times.length
         ? `<div class="hint">${L("Prossime occorrenze:")}</div><ul class="cron-help-examples">${times
             .map((t) => `<li>${escapeHtml(new Date(t).toLocaleDateString(nameLocale(), { weekday: 'short' }) + ' ' + fmtDate(t))}</li>`)
@@ -2243,6 +2669,27 @@ function bindEditorEvents() {
       renderEditor();
     });
   });
+
+  bindExceptionForm('ex');
+  const addExceptionBtn = document.getElementById('btn-add-exception');
+  if (addExceptionBtn)
+    addExceptionBtn.addEventListener('click', () => {
+      const r = readExceptionForm('ex');
+      if (r.error) {
+        alert(r.error);
+        return;
+      }
+      state.editing.exceptions = [...(state.editing.exceptions || []), { id: uid(), ...r.exception }].sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0));
+      renderEditor();
+    });
+  const applyExceptionsBtn = document.getElementById('btn-apply-exceptions');
+  if (applyExceptionsBtn) applyExceptionsBtn.addEventListener('click', openApplyExceptions);
+  root.querySelectorAll('[data-remove-exception]').forEach((el) =>
+    el.addEventListener('click', () => {
+      state.editing.exceptions.splice(Number(el.dataset.removeException), 1);
+      renderEditor();
+    })
+  );
 
   const addActionBtn = document.getElementById('btn-add-action');
   if (addActionBtn)
@@ -2670,7 +3117,7 @@ async function renderTasksPage() {
     const cards = sorted
       .map((t) => {
         const next = t.enabled && t.nextRun ? new Date(t.nextRun) : null;
-        const history = t.history || [];
+        const history = (t.history || []).filter((h) => h.mode !== 'skipped');
         const ok = history.filter((h) => h.status === 'success').length;
         const ko = history.filter((h) => h.status === 'error').length;
         const last = history.find((h) => h.mode !== 'actions' && h.mode !== 'cleanup');
@@ -2862,7 +3309,14 @@ function initGlobalUI() {
     }
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeCronHelp();
+    if (e.key === 'Escape') {
+      closeCronHelp();
+      closeModal();
+    }
+  });
+  // the generic window (What's new, delete a category, exceptions for several tasks)
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'app-modal-overlay' || e.target.closest('[data-close-app-modal]')) closeModal();
   });
   document.getElementById('btn-dashboard').addEventListener('click', () => {
     state.mode = 'dashboard';
@@ -3002,4 +3456,5 @@ function applyStaticTranslations() {
   renderEditor();
   setInterval(refreshSidebar, 30000); // keep "prossimo run" / badges fresh
   setInterval(refreshQueue, 30000);
+  initUpdates();
 })();

@@ -229,12 +229,24 @@ const GUIDE_CONTENT = {
         p: 'Sopra l\'elenco dei task e nel Palinsesto trovi la ricerca e i menu per ordinare (categoria, A → Z, orario, stato) e filtrare (attivi, disattivati, con errori, azioni in attesa). L\'ultima scelta viene ricordata.'
       },
       {
+        h: 'Eccezioni di calendario',
+        p: 'Nella scheda di un task, sotto le pianificazioni, <b>Eccezioni di calendario</b> elenca i giorni in cui il task non va come al solito: un giorno o un intervallo, con una nota. <b>Salta</b>: quel giorno non si scarica (produzione ferma a Ferragosto o a Natale). <b>Tratta come…</b>: quel giorno segue gli orari di un altro giorno della settimana (l\'agenzia applica il palinsesto della domenica a un mercoledì festivo: le pianificazioni "lun–ven" restano ferme e partono quelle del weekend). <b>Applica a più task…</b> aggiunge la stessa eccezione a task scelti a mano o a una categoria intera. I giorni saltati compaiono come "saltato (eccezione)" nella cronologia, senza avvisi; le esecuzioni manuali non cambiano. Le festività si inseriscono a mano, perché non tutte cambiano i download.'
+      },
+      {
+        h: 'Attesa del file',
+        p: 'Se la fonte pubblica il file in ritardo, nella scheda Sorgente attiva <b>Attesa del file</b>: il task riprova ogni N minuti per al massimo M minuti dall\'orario previsto (per esempio dalle 19:55 alle 20:15) invece di fallire al primo errore. A ogni tentativo l\'app controlla che il file non sia troppo piccolo e non sia una pagina web al posto del file; per i file locali aspetta anche che smetta di cambiare dimensione. Una password sbagliata (401) ferma subito l\'attesa. Durante l\'attesa il task conta come in esecuzione.'
+      },
+      {
+        h: 'Backup e categorie',
+        p: 'In Impostazioni → Backup esporti e importi task, impostazioni, categorie e colori. "Includi password e token" è spento di default: le password restano fuori dal file e dopo l\'importazione l\'app elenca quelle da riscrivere. In Categorie puoi rinominare (se il nome esiste, le due categorie si uniscono) ed eliminare una categoria scegliendo dove spostare i suoi task.'
+      },
+      {
         h: 'Primo avvio (app non firmata)',
         p: 'L\'app è gratuita e non è firmata digitalmente. <b>macOS:</b> se compare "app danneggiata" o non si apre, clic destro → Apri, oppure nel Terminale: <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>. <b>Windows:</b> se compare SmartScreen, clicca "Ulteriori informazioni" → "Esegui comunque".'
       },
       {
         h: 'Aggiornamenti',
-        p: 'Quando esce una nuova versione compare un avviso in alto (e in Impostazioni → Aggiornamenti). <b>Scarica e installa</b> scarica nella cartella Download l\'installer giusto per il tuo sistema e ne verifica lo SHA-256. Poi: su <b>Windows</b> "Chiudi e installa" chiude l\'app (i download pianificati si fermano), avvia l\'installazione e al termine la riapre; su <b>macOS</b> e <b>Linux</b> "Apri installer" apre il file, e tu chiudi l\'app con "Esci" e installi la nuova versione. Nulla viene installato senza che tu lo chieda.'
+        p: 'Quando esce una nuova versione compare un avviso in alto (e in Impostazioni → Aggiornamenti) con le prime righe delle note di rilascio. <b>Scarica e installa</b> scarica nella cartella Download l\'installer giusto per il tuo sistema, con barra di avanzamento e pulsante Annulla, e ne verifica lo SHA-256. <b>Ricordamelo dopo</b> nasconde l\'avviso per 24 ore, <b>Salta questa versione</b> fino alla successiva. Prima di installare l\'app fa una copia di sicurezza del file dei dati (ultime 3 in <code>backups/</code>). Poi: su <b>Windows</b> "Chiudi e installa" chiude l\'app (rifiutato finché ci sono download in corso), avvia l\'installazione e al termine la riapre; su <b>macOS</b> e <b>Linux</b> "Apri installer" apre il file, e tu chiudi l\'app con "Esci" e installi la nuova versione. Al primo avvio dopo l\'aggiornamento compare la finestra <b>Novità</b>. Nulla viene installato senza che tu lo chieda.'
       }
     ]
   },
@@ -287,12 +299,24 @@ const GUIDE_CONTENT = {
         p: 'Above the task list and in the Schedule you find the search box and the menus to sort (category, A → Z, time, status) and filter (active, disabled, with errors, actions waiting). The last choice is remembered.'
       },
       {
+        h: 'Calendar exceptions',
+        p: 'In a task, below the schedules, <b>Calendar exceptions</b> lists the days on which the task does not run as usual: one day or a range, with a note. <b>Skip</b>: nothing is downloaded that day (production stopped on 15 August or 25 December). <b>Treat as…</b>: that day follows the schedules of another weekday (the agency applies its Sunday timetable on a Wednesday holiday: the "Mon–Fri" schedules stay quiet and the weekend ones run). <b>Apply to several tasks…</b> adds the same exception to tasks you pick or to a whole category. Skipped days show as "skipped (exception)" in the history, with no alert; manual runs are not affected. Holidays are entered by hand, because not every holiday changes the downloads.'
+      },
+      {
+        h: 'Waiting for the file',
+        p: 'If the source publishes the file late, switch on <b>Waiting for the file</b> in the Source tab: the task tries again every N minutes for at most M minutes from the scheduled time (for example 19:55 to 20:15) instead of failing at the first error. Each attempt checks that the file is not too small and is not a web page instead of the file; for local files it also waits until the size stops changing. A wrong password (401) stops the wait at once. While it waits the task counts as running.'
+      },
+      {
+        h: 'Backup and categories',
+        p: 'In Settings → Backup you export and import tasks, settings, categories and colours. "Include passwords and tokens" is off by default: passwords stay out of the file and after the import the app lists the ones to type again. In Categories you can rename (if the name exists, the two categories merge) and delete a category, choosing where its tasks go.'
+      },
+      {
         h: 'First launch (unsigned app)',
         p: 'The app is free and not code-signed. <b>macOS:</b> if it says the app is damaged or cannot be opened, right-click it → Open, or run <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code> in Terminal. <b>Windows:</b> if SmartScreen appears, click "More info" → "Run anyway".'
       },
       {
         h: 'Updates',
-        p: 'When a new version is out, a notice appears at the top (and in Settings → Updates). <b>Download and install</b> fetches the right installer for your system into the Downloads folder and verifies its SHA-256. Then: on <b>Windows</b> "Close and install" closes the app (scheduled downloads stop), runs the installer and reopens it when done; on <b>macOS</b> and <b>Linux</b> "Open installer" opens the file, and you quit the app with "Quit" and install the new version. Nothing is installed unless you ask.'
+        p: 'When a new version is out, a notice appears at the top (and in Settings → Updates) with the first lines of the release notes. <b>Download and install</b> downloads the right installer for your system into the Downloads folder, with a progress bar and a Cancel button, and checks its SHA-256. <b>Remind me later</b> hides the notice for 24 hours, <b>Skip this version</b> until the next one. Before installing the app makes a safety copy of the data file (the last 3 in <code>backups/</code>). Then: on <b>Windows</b> "Close and install" closes the app (refused while downloads are running), starts the installation and reopens the app when done; on <b>macOS</b> and <b>Linux</b> "Open installer" opens the file, and you quit the app with "Quit" and install the new version. At the first start after the update a <b>What\'s new</b> window appears. Nothing is installed without your request.'
       }
     ]
   },
@@ -345,12 +369,24 @@ const GUIDE_CONTENT = {
         p: 'Sobre la lista de tareas y en la Programación están el buscador y los menús para ordenar (categoría, A → Z, hora, estado) y filtrar (activas, desactivadas, con errores, acciones en espera). Se recuerda la última elección.'
       },
       {
+        h: 'Excepciones de calendario',
+        p: 'En una tarea, bajo las programaciones, <b>Excepciones de calendario</b> lista los días en que la tarea no va como siempre: un día o un intervalo, con una nota. <b>Omitir</b>: ese día no se descarga (producción parada el 15 de agosto o el 25 de diciembre). <b>Tratar como…</b>: ese día sigue las programaciones de otro día de la semana (la agencia aplica la parrilla del domingo a un miércoles festivo: las programaciones "lun–vie" se quedan quietas y salen las del fin de semana). <b>Aplicar a varias tareas…</b> añade la misma excepción a tareas elegidas o a una categoría entera. Los días omitidos aparecen como "omitido (excepción)" en el historial, sin avisos; las ejecuciones manuales no cambian. Los festivos se introducen a mano, porque no todos cambian las descargas.'
+      },
+      {
+        h: 'Espera del archivo',
+        p: 'Si la fuente publica el archivo tarde, activa <b>Espera del archivo</b> en la pestaña Origen: la tarea reintenta cada N minutos durante como máximo M minutos desde la hora prevista (por ejemplo de 19:55 a 20:15) en lugar de fallar al primer error. En cada intento la app comprueba que el archivo no sea demasiado pequeño ni una página web en lugar del archivo; en los archivos locales espera además a que deje de cambiar de tamaño. Una contraseña incorrecta (401) detiene la espera de inmediato. Mientras espera, la tarea cuenta como en ejecución.'
+      },
+      {
+        h: 'Copia de seguridad y categorías',
+        p: 'En Ajustes → Copia de seguridad exportas e importas tareas, ajustes, categorías y colores. "Incluir contraseñas y tokens" está desactivado por defecto: las contraseñas quedan fuera del archivo y tras la importación la app lista las que hay que reescribir. En Categorías puedes renombrar (si el nombre existe, las dos categorías se unen) y eliminar una categoría eligiendo adónde van sus tareas.'
+      },
+      {
         h: 'Primer inicio (app sin firmar)',
         p: 'La app es gratuita y no está firmada digitalmente. <b>macOS:</b> si aparece "app dañada" o no se abre, clic derecho → Abrir, o en Terminal: <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>. <b>Windows:</b> si aparece SmartScreen, pulsa "Más información" → "Ejecutar de todos modos".'
       },
       {
         h: 'Actualizaciones',
-        p: 'Cuando sale una versión nueva aparece un aviso arriba (y en Ajustes → Actualizaciones). <b>Descargar e instalar</b> descarga en la carpeta Descargas el instalador adecuado para tu sistema y verifica su SHA-256. Después: en <b>Windows</b> "Cerrar e instalar" cierra la app (las descargas programadas se detienen), inicia la instalación y al terminar la vuelve a abrir; en <b>macOS</b> y <b>Linux</b> "Abrir instalador" abre el archivo, y tú cierras la app con "Salir" e instalas la versión nueva. No se instala nada sin que lo pidas.'
+        p: 'Cuando sale una versión nueva aparece un aviso arriba (y en Ajustes → Actualizaciones) con las primeras líneas de las notas de la versión. <b>Descargar e instalar</b> descarga en la carpeta Descargas el instalador adecuado para tu sistema, con barra de progreso y botón Cancelar, y verifica su SHA-256. <b>Recordármelo después</b> oculta el aviso 24 horas, <b>Omitir esta versión</b> hasta la siguiente. Antes de instalar la app hace una copia de seguridad del archivo de datos (las últimas 3 en <code>backups/</code>). Después: en <b>Windows</b> "Cerrar e instalar" cierra la app (se rechaza mientras haya descargas en curso), inicia la instalación y al terminar la vuelve a abrir; en <b>macOS</b> y <b>Linux</b> "Abrir instalador" abre el archivo, y tú cierras la app con "Salir" e instalas la versión nueva. En el primer inicio tras la actualización aparece la ventana <b>Novedades</b>. No se instala nada sin que lo pidas.'
       }
     ]
   }

@@ -512,6 +512,122 @@ const TEXT = {
  "Pulizia manuale della cartella: {folder}": [
   "Manual folder cleanup: {folder}",
   "Limpieza manual de la carpeta: {folder}"
+ ],
+ "L'icona appare nell'area notifiche in basso a destra.\n\n• Doppio click sull'icona → riapri finestra\n• Tasto destro sull'icona → Esci → chiudi completamente\n\nQuesto avviso compare una sola volta.": [
+  "The icon appears in the notification area at the bottom right.\n\n• Double-click the icon → reopen the window\n• Right-click the icon → Quit → close completely\n\nThis notice appears only once.",
+  "El icono aparece en el área de notificaciones, abajo a la derecha.\n\n• Doble clic en el icono → reabrir la ventana\n• Clic derecho en el icono → Salir → cerrar por completo\n\nEste aviso aparece una sola vez."
+ ],
+ "Una password salvata non si può aprire su questo PC o con questo utente: va riscritta ({id}).": [
+  "A saved password cannot be opened on this PC or by this user: it must be typed again ({id}).",
+  "Una contraseña guardada no se puede abrir en este PC o con este usuario: hay que reescribirla ({id})."
+ ],
+ "Nuova versione {latest} disponibile (installata: {current}).": [
+  "New version {latest} available (installed: {current}).",
+  "Nueva versión {latest} disponible (instalada: {current})."
+ ],
+ "Copia di sicurezza prima dell'aggiornamento non riuscita: {error}": [
+  "Safety copy before the update failed: {error}",
+  "La copia de seguridad antes de la actualización falló: {error}"
+ ],
+ "Questo file non è un backup di G-Downloader": [
+  "This file is not a G-Downloader backup",
+  "Este archivo no es una copia de seguridad de G-Downloader"
+ ],
+ "Il file è troppo grande": [
+  "The file is too big",
+  "El archivo es demasiado grande"
+ ],
+ "Sostituisci tutto": [
+  "Replace everything",
+  "Sustituir todo"
+ ],
+ "Sostituire tutte le impostazioni e i task con quelli del file?": [
+  "Replace all settings and tasks with those of the file?",
+  "¿Sustituir todos los ajustes y tareas por los del archivo?"
+ ],
+ "I task e le impostazioni attuali saranno sostituiti ({n} task nel file).": [
+  "The current tasks and settings will be replaced ({n} tasks in the file).",
+  "Las tareas y ajustes actuales serán sustituidos ({n} tareas en el archivo)."
+ ],
+ "Il server ha risposto con una pagina web invece del file": [
+  "The server answered with a web page instead of the file",
+  "El servidor respondió con una página web en lugar del archivo"
+ ],
+ "File non ancora disponibile ({message}): riprovo tra {every} min, ancora {left} min di attesa (tentativo {n}).": [
+  "File not available yet ({message}): trying again in {every} min, {left} min of waiting left (attempt {n}).",
+  "Archivo aún no disponible ({message}): reintento en {every} min, quedan {left} min de espera (intento {n})."
+ ],
+ "{message} — il file non è arrivato entro {min} minuti ({n} tentativi).": [
+  "{message} — the file did not arrive within {min} minutes ({n} attempts).",
+  "{message} — el archivo no llegó en {min} minutos ({n} intentos)."
+ ],
+ "Il file sta ancora cambiando dimensione (copia in corso?)": [
+  "The file is still changing size (copy in progress?)",
+  "El archivo sigue cambiando de tamaño (¿copia en curso?)"
+ ],
+ "Fonte ferma? {name}": [
+  "Source stopped? {name}",
+  "¿Fuente parada? {name}"
+ ],
+ "File pronto: {name}": [
+  "File ready: {name}",
+  "Archivo listo: {name}"
+ ],
+ "Giorno trattato come {weekday}: la pianificazione \"{name}\" non gira oggi (eccezione di calendario).": [
+  "Day treated as {weekday}: the schedule \"{name}\" does not run today (calendar exception).",
+  "Día tratado como {weekday}: la programación \"{name}\" no se ejecuta hoy (excepción de calendario)."
+ ],
+ "Download saltato: oggi c'è un'eccezione di calendario{note}.": [
+  "Download skipped: there is a calendar exception today{note}.",
+  "Descarga omitida: hoy hay una excepción de calendario{note}."
+ ],
+ "Il bot token non ha il formato giusto (numero:codice, come lo dà BotFather)": [
+  "The bot token does not have the right format (number:code, as BotFather gives it)",
+  "El token del bot no tiene el formato correcto (número:código, como lo da BotFather)"
+ ],
+ "{list}: rifiutati dal server": [
+  "{list}: rejected by the server",
+  "{list}: rechazados por el servidor"
+ ],
+ "Download fallito: {name}": [
+  "Download failed: {name}",
+  "Descarga fallida: {name}"
+ ],
+ "Nuova versione {latest} disponibile": [
+  "New version {latest} available",
+  "Nueva versión {latest} disponible"
+ ],
+ "tentativo {n} non riuscito: {message}": [
+  "attempt {n} failed: {message}",
+  "intento {n} fallido: {message}"
+ ],
+ "avviso non inviato: {message}": [
+  "alert not sent: {message}",
+  "aviso no enviado: {message}"
+ ],
+ "avviso di nuova versione non inviato: {message}": [
+  "new-version alert not sent: {message}",
+  "aviso de versión nueva no enviado: {message}"
+ ],
+ "Email di prova": [
+  "Test email",
+  "Correo de prueba"
+ ],
+ "Configurazione email funzionante.": [
+  "Email configuration working.",
+  "Configuración de correo funcionando."
+ ],
+ "Prova Telegram: configurazione funzionante.": [
+  "Telegram test: configuration working.",
+  "Prueba de Telegram: configuración funcionando."
+ ],
+ "Report settimanale: {ok} ok, {failed} falliti": [
+  "Weekly report: {ok} ok, {failed} failed",
+  "Informe semanal: {ok} correctas, {failed} fallidas"
+ ],
+ "Report giornaliero: {ok} ok, {failed} falliti": [
+  "Daily report: {ok} ok, {failed} failed",
+  "Informe diario: {ok} correctas, {failed} fallidas"
  ]
 };
 

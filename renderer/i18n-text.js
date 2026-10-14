@@ -1671,6 +1671,514 @@ const UI_TEXT = {
  "Mostra o nascondi la ricerca e i filtri": [
   "Show or hide the search and filters",
   "Mostrar u ocultar la búsqueda y los filtros"
+ ],
+ "il download si è fermato: nessun dato ricevuto per un minuto": [
+  "the download stalled: no data received for a minute",
+  "la descarga se detuvo: no llegaron datos durante un minuto"
+ ],
+ "{n} download in corso: riprova quando sono finiti (chiudere ora li interromperebbe)": [
+  "{n} download(s) running: try again when they are finished (closing now would interrupt them)",
+  "{n} descarga(s) en curso: reintenta cuando terminen (cerrar ahora las interrumpiría)"
+ ],
+ "Ricordamelo dopo": [
+  "Remind me later",
+  "Recordármelo después"
+ ],
+ "Salta questa versione": [
+  "Skip this version",
+  "Omitir esta versión"
+ ],
+ "Note di rilascio": [
+  "Release notes",
+  "Notas de la versión"
+ ],
+ "Annulla": [
+  "Cancel",
+  "Cancelar"
+ ],
+ "Riprova": [
+  "Try again",
+  "Reintentar"
+ ],
+ "Novità": [
+  "What's new",
+  "Novedades"
+ ],
+ "Ultimo controllo:": [
+  "Last check:",
+  "Última comprobación:"
+ ],
+ "riuscito": [
+  "succeeded",
+  "correcta"
+ ],
+ "non riuscito: {error}": [
+  "failed: {error}",
+  "fallida: {error}"
+ ],
+ "Ultimo controllo: mai": [
+  "Last check: never",
+  "Última comprobación: nunca"
+ ],
+ "Versione {v} scaricata e verificata (SHA-256). \"Chiudi e installa\" chiude G-Downloader (i download pianificati si fermano) e avvia l'installazione; al termine l'app si riapre.": [
+  "Version {v} downloaded and verified (SHA-256). \"Close and install\" closes G-Downloader (scheduled downloads stop) and starts the installation; the app reopens when it is done.",
+  "Versión {v} descargada y verificada (SHA-256). \"Cerrar e instalar\" cierra G-Downloader (las descargas programadas se detienen) e inicia la instalación; al terminar la app se vuelve a abrir."
+ ],
+ "Versione {v} scaricata e verificata (SHA-256). \"Apri installer\" apre il file .dmg: chiudi G-Downloader con \"Esci\" dall'icona nella barra dei menu e trascina la nuova versione in Applicazioni.": [
+  "Version {v} downloaded and verified (SHA-256). \"Open installer\" opens the .dmg file: quit G-Downloader with \"Quit\" from the menu-bar icon and drag the new version into Applications.",
+  "Versión {v} descargada y verificada (SHA-256). \"Abrir instalador\" abre el archivo .dmg: cierra G-Downloader con \"Salir\" desde el icono de la barra de menús y arrastra la versión nueva a Aplicaciones."
+ ],
+ "Versione {v} scaricata e verificata (SHA-256). \"Apri installer\" mostra il file AppImage nella cartella: chiudi G-Downloader con \"Esci\" e avvia il nuovo file.": [
+  "Version {v} downloaded and verified (SHA-256). \"Open installer\" shows the AppImage file in its folder: quit G-Downloader with \"Quit\" and start the new file.",
+  "Versión {v} descargada y verificada (SHA-256). \"Abrir instalador\" muestra el archivo AppImage en su carpeta: cierra G-Downloader con \"Salir\" y ejecuta el archivo nuevo."
+ ],
+ "Novità della versione {v}": [
+  "What's new in version {v}",
+  "Novedades de la versión {v}"
+ ],
+ "Nessuna nota per questa versione.": [
+  "No notes for this version.",
+  "Sin notas para esta versión."
+ ],
+ "Versione {v} scaricata e verificata (SHA-256).": [
+  "Version {v} downloaded and verified (SHA-256).",
+  "Versión {v} descargada y verificada (SHA-256)."
+ ],
+ "Aggiornato a G-Downloader {v}.": [
+  "Updated to G-Downloader {v}.",
+  "Actualizado a G-Downloader {v}."
+ ],
+ "Oggi saltato": [
+  "Skipped today",
+  "Omitido hoy"
+ ],
+ "Oggi come {weekday}": [
+  "Today as {weekday}",
+  "Hoy como {weekday}"
+ ],
+ "saltato (eccezione)": [
+  "skipped (exception)",
+  "omitido (excepción)"
+ ],
+ "Attesa del file: se non è ancora pubblicato, riprova ogni tot minuti per un po'": [
+  "Waiting for the file: if it is not published yet, try again every few minutes for a while",
+  "Espera del archivo: si aún no está publicado, reintenta cada pocos minutos durante un rato"
+ ],
+ "Riprova ogni (minuti)": [
+  "Try again every (minutes)",
+  "Reintentar cada (minutos)"
+ ],
+ "Per al massimo (minuti dall'avvio del task)": [
+  "For at most (minutes from the start of the task)",
+  "Como máximo (minutos desde el inicio de la tarea)"
+ ],
+ "Dimensione minima del file (KB, 0 = quella delle Impostazioni)": [
+  "Minimum file size (KB, 0 = the one in Settings)",
+  "Tamaño mínimo del archivo (KB, 0 = el de Ajustes)"
+ ],
+ "Aspetta che il file smetta di crescere (secondi, 0 = no)": [
+  "Wait until the file stops growing (seconds, 0 = no)",
+  "Espera a que el archivo deje de crecer (segundos, 0 = no)"
+ ],
+ "Tratta una pagina web (errore del server) come file non ancora arrivato": [
+  "Treat a web page (server error) as a file that has not arrived yet",
+  "Trata una página web (error del servidor) como archivo que aún no ha llegado"
+ ],
+ "Esempio: il task parte alle 19:55, riprova ogni minuto fino alle 20:15. Un file vuoto, troppo piccolo o una pagina d'errore contano come \"non ancora arrivato\"; una password sbagliata (401) ferma subito l'attesa. Mentre aspetta il task risulta in esecuzione, e con \"Download contemporanei\" limitati occupa un posto.": [
+  "Example: the task starts at 19:55 and tries again every minute until 20:15. An empty file, one that is too small, or an error page counts as \"not arrived yet\"; a wrong password (401) stops the wait at once. While it waits the task shows as running, and with \"Simultaneous downloads\" limited it takes a place.",
+  "Ejemplo: la tarea empieza a las 19:55 y reintenta cada minuto hasta las 20:15. Un archivo vacío, demasiado pequeño o una página de error cuentan como \"aún no ha llegado\"; una contraseña incorrecta (401) detiene la espera de inmediato. Mientras espera, la tarea figura en ejecución y, con \"Descargas simultáneas\" limitadas, ocupa un puesto."
+ ],
+ "tratta come {weekday}": [
+  "treat as {weekday}",
+  "tratar como {weekday}"
+ ],
+ "salta (nessun download)": [
+  "skip (no download)",
+  "omitir (sin descarga)"
+ ],
+ "Dal": [
+  "From",
+  "Desde"
+ ],
+ "Al (facoltativo, incluso)": [
+  "To (optional, included)",
+  "Hasta (opcional, incluido)"
+ ],
+ "Che cosa succede quel giorno": [
+  "What happens that day",
+  "Qué pasa ese día"
+ ],
+ "Salta: non scaricare": [
+  "Skip: do not download",
+  "Omitir: no descargar"
+ ],
+ "Tratta come un altro giorno della settimana": [
+  "Treat as another weekday",
+  "Tratar como otro día de la semana"
+ ],
+ "Segui gli orari di": [
+  "Follow the schedules of",
+  "Seguir los horarios de"
+ ],
+ "Nota (facoltativa)": [
+  "Note (optional)",
+  "Nota (opcional)"
+ ],
+ "es. Ferragosto, palinsesto festivo dell'agenzia": [
+  "e.g. 15 August, the agency's holiday timetable",
+  "p. ej. 15 de agosto, parrilla festiva de la agencia"
+ ],
+ "Scegli almeno il giorno di inizio.": [
+  "Pick at least the first day.",
+  "Elige al menos el día de inicio."
+ ],
+ "La data finale è prima di quella iniziale.": [
+  "The end date is before the start date.",
+  "La fecha final es anterior a la inicial."
+ ],
+ "Eccezioni di calendario": [
+  "Calendar exceptions",
+  "Excepciones de calendario"
+ ],
+ "— giorni in cui questo task non gira come al solito (festività, produzione ferma, palinsesto festivo dell'agenzia)": [
+  "— days on which this task does not run as usual (holidays, production stopped, the agency's holiday timetable)",
+  "— días en que esta tarea no va como siempre (festivos, producción parada, parrilla festiva de la agencia)"
+ ],
+ "oggi": [
+  "today",
+  "hoy"
+ ],
+ "Nessuna eccezione.": [
+  "No exceptions.",
+  "Sin excepciones."
+ ],
+ "Nuova eccezione": [
+  "New exception",
+  "Nueva excepción"
+ ],
+ "+ Aggiungi eccezione": [
+  "+ Add exception",
+  "+ Añadir excepción"
+ ],
+ "Aggiunge la stessa eccezione a più task, scelti a mano o per categoria": [
+  "Adds the same exception to several tasks, picked one by one or by category",
+  "Añade la misma excepción a varias tareas, elegidas a mano o por categoría"
+ ],
+ "Applica a più task…": [
+  "Apply to several tasks…",
+  "Aplicar a varias tareas…"
+ ],
+ "Salta: quel giorno non si scarica. Tratta come: quel giorno valgono gli orari di un altro giorno (con Domenica, le pianificazioni \"lun–ven\" restano ferme e partono quelle del weekend). Le esecuzioni manuali non cambiano. Le modifiche valgono dopo Salva.": [
+  "Skip: nothing is downloaded that day. Treat as: that day follows the schedules of another weekday (with Sunday, the \"Mon–Fri\" schedules stay quiet and the weekend ones run). Manual runs do not change. Changes take effect after Save.",
+  "Omitir: ese día no se descarga. Tratar como: ese día valen los horarios de otro día (con domingo, las programaciones \"lun–vie\" se quedan quietas y salen las del fin de semana). Las ejecuciones manuales no cambian. Los cambios valen tras Guardar."
+ ],
+ "Eccezione per più task": [
+  "Exception for several tasks",
+  "Excepción para varias tareas"
+ ],
+ "Task a cui applicarla": [
+  "Tasks to apply it to",
+  "Tareas a las que aplicarla"
+ ],
+ "Senza categoria": [
+  "No category",
+  "Sin categoría"
+ ],
+ "Applica": [
+  "Apply",
+  "Aplicar"
+ ],
+ "Scegli almeno un task.": [
+  "Pick at least one task.",
+  "Elige al menos una tarea."
+ ],
+ "Eccezione aggiunta a {n} task.": [
+  "Exception added to {n} task(s).",
+  "Excepción añadida a {n} tarea(s)."
+ ],
+ "Generali": [
+  "General",
+  "General"
+ ],
+ "Avvisi": [
+  "Alerts",
+  "Avisos"
+ ],
+ "Categorie": [
+  "Categories",
+  "Categorías"
+ ],
+ "Backup": [
+  "Backup",
+  "Copia de seguridad"
+ ],
+ "Aiuto e informazioni": [
+  "Help & About",
+  "Ayuda e información"
+ ],
+ "Nome di questa installazione (compare negli avvisi)": [
+  "Name of this installation (shown in alerts)",
+  "Nombre de esta instalación (aparece en los avisos)"
+ ],
+ "es. Server sala regia": [
+  "e.g. Control room server",
+  "p. ej. Servidor sala de control"
+ ],
+ "Ogni avviso inizia con [G-Downloader · nome]: con più PC in studio si capisce quale scrive. Vuoto = nome del computer.": [
+  "Every alert starts with [G-Downloader · name]: with several PCs in the studio you can tell which one writes. Empty = the computer name.",
+  "Cada aviso empieza con [G-Downloader · nombre]: con varios PC en el estudio se sabe cuál escribe. Vacío = nombre del equipo."
+ ],
+ "Uso non presidiato": [
+  "Unattended use",
+  "Uso desatendido"
+ ],
+ "Tieni sveglio il computer finché l'app è aperta (impedisce la sospensione)": [
+  "Keep the computer awake while the app is open (prevents sleep)",
+  "Mantén el equipo despierto mientras la app esté abierta (impide la suspensión)"
+ ],
+ "Chiudendo la finestra l'app resta nella tray (un solo avviso la prima volta); una seconda apertura mostra la finestra già aperta; dimensione e posizione della finestra vengono ricordate.": [
+  "Closing the window keeps the app in the tray (one notice, the first time); starting it a second time shows the window already open; the size and position of the window are remembered.",
+  "Al cerrar la ventana la app sigue en la bandeja (un solo aviso la primera vez); un segundo inicio muestra la ventana ya abierta; se recuerdan el tamaño y la posición de la ventana."
+ ],
+ "Notifiche": [
+  "Notifications",
+  "Notificaciones"
+ ],
+ "Nuovi task": [
+  "New tasks",
+  "Tareas nuevas"
+ ],
+ "Per un file che la fonte pubblica in ritardo c'è, in ogni task, \"Attesa del file\" (scheda Sorgente).": [
+  "For a file that the source publishes late, every task has \"Waiting for the file\" (Source tab).",
+  "Para un archivo que la fuente publica tarde, cada tarea tiene \"Espera del archivo\" (pestaña Origen)."
+ ],
+ "Usa la configurazione email qui sotto. Riepiloga i download completati/falliti nel periodo, con dettaglio errori; i giorni saltati per un'eccezione di calendario non contano come falliti.": [
+  "Uses the email settings below. It sums up the completed/failed downloads of the period, with the errors; days skipped by a calendar exception do not count as failed.",
+  "Usa la configuración de correo de abajo. Resume las descargas completadas/falladas del periodo, con el detalle de errores; los días omitidos por una excepción de calendario no cuentan como fallidos."
+ ],
+ "Avvisi via email": [
+  "Email alerts",
+  "Avisos por correo"
+ ],
+ "Abilita avvisi email": [
+  "Enable email alerts",
+  "Activar avisos por correo"
+ ],
+ "Connessione cifrata fin dall'inizio (SSL/TLS, di solito porta 465)": [
+  "Encrypted connection from the start (SSL/TLS, usually port 465)",
+  "Conexión cifrada desde el principio (SSL/TLS, normalmente puerto 465)"
+ ],
+ "Spenta: la connessione si cifra con STARTTLS (di solito porta 587). Con un utente la connessione deve essere cifrata: la password non viaggia mai in chiaro.": [
+  "Off: the connection is encrypted with STARTTLS (usually port 587). With a user name the connection must be encrypted: the password never travels in clear text.",
+  "Desactivado: la conexión se cifra con STARTTLS (normalmente puerto 587). Con un usuario la conexión debe estar cifrada: la contraseña nunca viaja en claro."
+ ],
+ "Destinatari (separati da virgola, spazio o a capo)": [
+  "Recipients (separated by comma, space or new line)",
+  "Destinatarios (separados por coma, espacio o salto de línea)"
+ ],
+ "Un solo messaggio per tutti, con i destinatari in copia nascosta (Bcc): nessuno vede gli indirizzi degli altri. Al massimo 20.": [
+  "One message for everybody, with the recipients in blind copy (Bcc): nobody sees the others' addresses. At most 20.",
+  "Un solo mensaje para todos, con los destinatarios en copia oculta (Bcc): nadie ve las direcciones de los demás. Máximo 20."
+ ],
+ "Avvisi via Telegram": [
+  "Telegram alerts",
+  "Avisos por Telegram"
+ ],
+ "Abilita avvisi Telegram": [
+  "Enable Telegram alerts",
+  "Activar avisos por Telegram"
+ ],
+ "Ogni destinatario riceve gli avvisi. Usa la nota per ricordare chi è. Telegram viene contattato solo se questa opzione è attiva.": [
+  "Every recipient gets the alerts. Use the note to remember who it is. Telegram is contacted only when this option is on.",
+  "Cada destinatario recibe los avisos. Usa la nota para recordar quién es. Solo se contacta con Telegram si esta opción está activada."
+ ],
+ "Ogni categoria ha un colore assegnato in automatico, usato nell'elenco dei task, nel Palinsesto e nelle etichette. Cliccalo per sceglierne un altro, ↺ ripristina quello automatico. Rinomina cambia il nome in tutti i task (se esiste già, le due categorie si uniscono); Elimina chiede dove spostare i task.": [
+  "Every category gets an automatic colour, used in the task list, the Schedule and the labels. Click it to pick another one, ↺ restores the automatic one. Rename changes the name in every task (if it already exists, the two categories merge); Delete asks where the tasks go.",
+  "Cada categoría tiene un color asignado automáticamente, usado en la lista de tareas, en la Programación y en las etiquetas. Haz clic para elegir otro, ↺ restaura el automático. Renombrar cambia el nombre en todas las tareas (si ya existe, las dos categorías se unen); Eliminar pregunta adónde van las tareas."
+ ],
+ "Rinomina": [
+  "Rename",
+  "Renombrar"
+ ],
+ "Elimina": [
+  "Delete",
+  "Eliminar"
+ ],
+ "Il controllo avviene 15 secondi dopo l'avvio e poi ogni 24 ore. Si contatta solo la pagina delle release di G-Downloader su GitHub.": [
+  "The check runs 15 seconds after start and then every 24 hours. Only G-Downloader's release page on GitHub is contacted.",
+  "La comprobación se hace 15 segundos después del inicio y luego cada 24 horas. Solo se contacta la página de versiones de G-Downloader en GitHub."
+ ],
+ "Controlla ora": [
+  "Check now",
+  "Comprobar ahora"
+ ],
+ "Backup configurazione": [
+  "Configuration backup",
+  "Copia de seguridad de configuración"
+ ],
+ "Esporta o importa task, impostazioni, categorie e colori. Utile per portare la configurazione su un altro computer. Non contiene la cronologia dei download né i log.": [
+  "Export or import tasks, settings, categories and colours. Useful for moving the configuration to another computer. It does not contain the download history or the logs.",
+  "Exporta o importa tareas, ajustes, categorías y colores. Útil para llevar la configuración a otro equipo. No contiene el historial de descargas ni los registros."
+ ],
+ "Includi password e token": [
+  "Include passwords and tokens",
+  "Incluir contraseñas y tokens"
+ ],
+ "Attenzione: il file conterrà password e token in chiaro (SMTP, Telegram, password dei server e indirizzi con credenziali). Conservalo in un posto sicuro e non condividerlo.": [
+  "Warning: the file will hold passwords and tokens in plain text (SMTP, Telegram, server passwords and addresses with credentials). Keep it somewhere safe and do not share it.",
+  "Atención: el archivo contendrá contraseñas y tokens en claro (SMTP, Telegram, contraseñas de servidores y direcciones con credenciales). Guárdalo en un lugar seguro y no lo compartas."
+ ],
+ "Spento (consigliato): password e token restano fuori dal file e, dopo l'importazione, l'app ti elenca quelli da riscrivere.": [
+  "Off (recommended): passwords and tokens stay out of the file and, after the import, the app lists the ones to type again.",
+  "Desactivado (recomendado): contraseñas y tokens quedan fuera del archivo y, tras la importación, la app lista los que hay que reescribir."
+ ],
+ "Esporta": [
+  "Export",
+  "Exportar"
+ ],
+ "Importa: sostituisci tutto": [
+  "Import: replace everything",
+  "Importar: sustituir todo"
+ ],
+ "Importa: aggiungi solo i task mancanti": [
+  "Import: add only the missing tasks",
+  "Importar: añadir solo las tareas que faltan"
+ ],
+ "Importa": [
+  "Import",
+  "Importar"
+ ],
+ "Sostituisci tutto: impostazioni e task diventano quelli del file. Aggiungi solo i mancanti: i task che questo PC non ha vengono aggiunti, spenti; impostazioni e task esistenti restano come sono. Una password che il file non contiene resta quella di questo PC, solo per lo stesso server e utente. Se il file esegue programmi, ti viene chiesto prima di importare.": [
+  "Replace everything: settings and tasks become those of the file. Add only the missing ones: tasks this PC does not have are added, switched off; existing settings and tasks stay as they are. A password the file does not contain stays the one of this PC, only for the same server and user. If the file runs programs, you are asked before importing.",
+  "Sustituir todo: ajustes y tareas pasan a ser los del archivo. Añadir solo las que faltan: las tareas que este PC no tiene se añaden, apagadas; los ajustes y tareas existentes quedan como están. Una contraseña que el archivo no contiene sigue siendo la de este PC, solo para el mismo servidor y usuario. Si el archivo ejecuta programas, se te pregunta antes de importar."
+ ],
+ "Versione, licenza, collegamenti, informazioni per l'assistenza e cartella dei log sono nella pagina Aiuto e informazioni.": [
+  "Version, licence, links, support info and the logs folder are on the Help & About page.",
+  "Versión, licencia, enlaces, información para asistencia y carpeta de registros están en la página Ayuda e información."
+ ],
+ "Apri Aiuto e informazioni": [
+  "Open Help & About",
+  "Abrir Ayuda e información"
+ ],
+ "Nessuna release pubblicata": [
+  "No release published",
+  "Ninguna versión publicada"
+ ],
+ "Nuovo nome per la categoria \"{name}\" (se esiste già, le due categorie si uniscono):": [
+  "New name for the category \"{name}\" (if it already exists, the two categories merge):",
+  "Nuevo nombre para la categoría \"{name}\" (si ya existe, las dos categorías se unen):"
+ ],
+ "Categorie unite: {n} task spostati.": [
+  "Categories merged: {n} task(s) moved.",
+  "Categorías unidas: {n} tarea(s) movidas."
+ ],
+ "Categoria rinominata in {n} task.": [
+  "Category renamed in {n} task(s).",
+  "Categoría renombrada en {n} tarea(s)."
+ ],
+ "Elimina la categoria \"{name}\"": [
+  "Delete the category \"{name}\"",
+  "Eliminar la categoría \"{name}\""
+ ],
+ "I task di questa categoria non vengono eliminati. Dove li sposto?": [
+  "The tasks of this category are not deleted. Where do they go?",
+  "Las tareas de esta categoría no se eliminan. ¿Adónde las muevo?"
+ ],
+ "Nessuna categoria": [
+  "No category",
+  "Sin categoría"
+ ],
+ "Elimina categoria": [
+  "Delete category",
+  "Eliminar categoría"
+ ],
+ "Categoria eliminata: {n} task spostati.": [
+  "Category deleted: {n} task(s) moved.",
+  "Categoría eliminada: {n} tarea(s) movidas."
+ ],
+ "Password SMTP (avvisi email)": [
+  "SMTP password (email alerts)",
+  "Contraseña SMTP (avisos por correo)"
+ ],
+ "Bot Token Telegram": [
+  "Telegram bot token",
+  "Token del bot de Telegram"
+ ],
+ "Password del server": [
+  "Server password",
+  "Contraseña del servidor"
+ ],
+ "Indirizzo con utente e password": [
+  "Address with user name and password",
+  "Dirección con usuario y contraseña"
+ ],
+ "Intestazione con chiave o token": [
+  "Header with a key or token",
+  "Cabecera con clave o token"
+ ],
+ "contiene password e token in chiaro": [
+  "contains passwords and tokens in plain text",
+  "contiene contraseñas y tokens en claro"
+ ],
+ "✓ Aggiunti {n} task (spenti)": [
+  "✓ Added {n} task(s) (switched off)",
+  "✓ Añadidas {n} tarea(s) (apagadas)"
+ ],
+ "Da riscrivere (non erano nel file):": [
+  "To type again (they were not in the file):",
+  "Para reescribir (no estaban en el archivo):"
+ ],
+ "Licenza MIT · © 2026 Graziano Melzi, OnAir Garage": [
+  "MIT licence · © 2026 Graziano Melzi, OnAir Garage",
+  "Licencia MIT · © 2026 Graziano Melzi, OnAir Garage"
+ ],
+ "Assistenza": [
+  "Support",
+  "Asistencia"
+ ],
+ "Copia info per assistenza": [
+  "Copy support info",
+  "Copiar info para asistencia"
+ ],
+ "Le info per l'assistenza contengono versione, sistema, lingua, nome dell'installazione, ultimo controllo aggiornamenti e ultimo errore: mai impostazioni, indirizzi, password o nomi di file.": [
+  "The support info holds version, system, language, installation name, last update check and last error: never settings, addresses, passwords or file names.",
+  "La info para asistencia contiene versión, sistema, idioma, nombre de la instalación, última comprobación de actualizaciones y último error: nunca ajustes, direcciones, contraseñas ni nombres de archivo."
+ ],
+ "Log: un file al giorno in una cartella dell'app, al massimo 5 MB ciascuno, gli ultimi 7 giorni.": [
+  "Logs: one file per day in a folder of the app, 5 MB at most each, the last 7 days.",
+  "Registros: un archivo al día en una carpeta de la app, 5 MB como máximo cada uno, los últimos 7 días."
+ ],
+ "Collegamenti": [
+  "Links",
+  "Enlaces"
+ ],
+ "Pagina delle release (note di rilascio e installer)": [
+  "Releases page (release notes and installers)",
+  "Página de versiones (notas e instaladores)"
+ ],
+ "Privacy": [
+  "Privacy",
+  "Privacidad"
+ ],
+ "G-Downloader contatta solo: le sorgenti dei tuoi task; GitHub (pagina delle release di questo programma) per il controllo degli aggiornamenti, se attivo; il server email e Telegram, solo se li hai attivati. Non invia statistiche e non ha account.": [
+  "G-Downloader contacts only: the sources of your tasks; GitHub (this program's release page) for the update check, if on; the email server and Telegram, only if you switched them on. It sends no statistics and has no accounts.",
+  "G-Downloader solo contacta: las fuentes de tus tareas; GitHub (página de versiones de este programa) para comprobar actualizaciones, si está activado; el servidor de correo y Telegram, solo si los has activado. No envía estadísticas ni tiene cuentas."
+ ],
+ "Componenti open source": [
+  "Open source components",
+  "Componentes de código abierto"
+ ],
+ "Primo avvio: app non firmata": [
+  "First launch: unsigned app",
+  "Primer inicio: app sin firmar"
+ ],
+ "L'app è gratuita e non è firmata digitalmente. Windows: se compare SmartScreen, clicca \"Ulteriori informazioni\" e poi \"Esegui comunque\". macOS: se compare \"app danneggiata\" o non si apre, clic destro sull'app → Apri, oppure nel Terminale: xattr -dr com.apple.quarantine /Applications/G-Downloader.app": [
+  "The app is free and not digitally signed. Windows: if SmartScreen appears, click \"More info\" and then \"Run anyway\". macOS: if you see \"app is damaged\" or it does not open, right-click the app → Open, or in Terminal: xattr -dr com.apple.quarantine /Applications/G-Downloader.app",
+  "La app es gratuita y no está firmada digitalmente. Windows: si aparece SmartScreen, pulsa \"Más información\" y luego \"Ejecutar de todos modos\". macOS: si aparece \"app dañada\" o no se abre, clic derecho en la app → Abrir, o en Terminal: xattr -dr com.apple.quarantine /Applications/G-Downloader.app"
+ ],
+ "✓ Copiato negli appunti": [
+  "✓ Copied to the clipboard",
+  "✓ Copiado al portapapeles"
  ]
 };
 
