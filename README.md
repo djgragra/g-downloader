@@ -12,11 +12,15 @@ By Graziano Melzi · [OnAir Garage](https://onairgarage.com) — contact: hello@
 - **Post-download actions**: run a program, move the file, open it, system notification; placeholders `{filepath}` `{filename}` `{folder}` `{taskName}`. Download and actions can also be run **separately and by hand** (*Download only*, *Actions only*, *Actions on another file…*, or a single action, with a *Preview* of the resolved commands), e.g. when a file arrived by email. Each schedule can also stop after the download, or wait for your confirmation (with an email/Telegram notice) before running the actions.
 - **Folder housekeeping**: fail-safe cleanup (files set aside and restored if the download fails), `_cestino` bin with expiry, cap on `.old-…` copies, folder size limit, a preview and a *Clean now* button.
 - **Search, filter and sort** the task lists (remembered between sessions). On unattended machines, a **new-version notice by email/Telegram** (once per version).
+- **Waiting for a late file**: a task keeps trying every N minutes for at most M minutes (for example 19:55 → 20:15); an empty file, one that is too small or a web page instead of the file counts as "not arrived yet"; a wrong password stops the wait at once.
+- **Calendar exceptions** per task (or several tasks, or a whole category at once): *skip* a day or a range of days, or *treat as another weekday* (an agency applies its Sunday timetable on a Wednesday holiday).
 - **Pre-download folder action** and duplicate protection (existing files are renamed, never overwritten).
-- **Retries** (global and per task) with email / Telegram alerts on failure.
-- **Dashboard**, categories, download history, daily statistics, light/dark theme.
+- **Retries** (global and per task) with email / Telegram alerts on failure: one email to all recipients in Bcc, an encrypted connection when a user name is set, three tries per channel, token and password masked in logs, every alert starting with `[G-Downloader · installation name]`.
+- **Dashboard**, categories (rename, merge, delete), download history, daily statistics, light/dark theme.
+- **Backup** of tasks, settings, categories and colours: passwords and tokens stay out of the file unless you tick *Include passwords and tokens*; after an import the app lists what must be typed again.
 - **UI languages**: Italiano, English, Español.
-- **Guided updates**: when a new release is out, the app downloads the right installer for your system, verifies it against `SHA256SUMS.txt` and starts it only when you ask.
+- **Guided updates**: when a new release is out, the app shows its release notes, downloads the right installer for your system (progress bar, *Cancel*), verifies it against `SHA256SUMS.txt` and starts it only when you ask; *Remind me later*, *Skip this version*, a safety copy of the data before installing and a *What's new* window after the update.
+- **Help & About** with *Copy support info* (never settings, addresses, passwords or file names), a logs folder (one file per day, 5 MB at most, 7 days) and a name for each installation, shown in every alert.
 
 ## Install
 
@@ -52,6 +56,12 @@ npm install
 npm start
 ```
 
+Tests (no Electron needed: the unit tests run on plain Node, the integration tests on a stand-in for Electron):
+
+```bash
+npm test
+```
+
 Build installers (output in `release/`):
 
 ```bash
@@ -60,11 +70,11 @@ npm run dist:mac     # dmg
 npm run dist:linux   # AppImage
 ```
 
-Releases are built by GitHub Actions when a `v*` tag is pushed.
+Releases are built by GitHub Actions when a `v*` tag is pushed, or when the workflow is started by hand with a version; the tests run first.
 
 ## Italiano
 
-App gratuita per download pianificati, sempre attiva nella tray. Scarica l'installer dalla pagina [Releases](https://github.com/djgragra/g-downloader/releases). L'app non è firmata: su macOS usa clic destro → Apri (o il comando `xattr` sopra); su Windows SmartScreen → "Ulteriori informazioni" → "Esegui comunque". Quando esce una nuova versione, l'app la segnala: "Scarica e installa" scarica l'installer giusto, ne verifica lo SHA-256 e lo avvia solo quando lo chiedi tu.
+App gratuita per download pianificati, sempre attiva nella tray. Scarica l'installer dalla pagina [Releases](https://github.com/djgragra/g-downloader/releases). L'app non è firmata: su macOS usa clic destro → Apri (o il comando `xattr` sopra); su Windows SmartScreen → "Ulteriori informazioni" → "Esegui comunque". Novità della 26.10.2: **attesa del file** pubblicato in ritardo (riprova ogni N minuti per M minuti), **eccezioni di calendario** per task (salta un giorno, o "tratta come" un altro giorno della settimana, per più task o una categoria intera), avvisi email in Bcc con tre tentativi, **backup** senza password (a meno che tu lo chieda), rinomina/elimina categorie, aggiornamento guidato completo e pagina Aiuto e informazioni. Quando esce una nuova versione, l'app la segnala: "Scarica e installa" scarica l'installer giusto, ne verifica lo SHA-256 e lo avvia solo quando lo chiedi tu.
 
 ## License
 

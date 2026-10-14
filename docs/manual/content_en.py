@@ -7,7 +7,8 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <li><b>Dynamic</b> URLs and file names: date, time, counter, random values, offsets (e.g. "the next hour").</li>
 <li>Several <b>schedules</b> per task: weekdays and times, one-off, every N seconds/minutes/hours/days, or a cron expression.</li>
 <li><b>Actions</b> before and after the download: folder cleanup, renaming of existing files, running programs or scripts, moving, opening, notifications.</li>
-<li><b>Automatic retries</b> on error and alerts by <b>email</b> and <b>Telegram</b>; periodic summary report.</li>
+<li><b>Automatic retries</b> on error, <b>waiting for a file that is published late</b> (chapter 13.1) and alerts by <b>email</b> and <b>Telegram</b>; periodic summary report.</li>
+<li><b>Calendar exceptions</b>: skip a day, or make it follow the schedules of another weekday (chapter 8.6).</li>
 <li><b>Dashboard</b> with statistics and charts, colour-coded categories, history, log files.</li>
 <li>Interface in <b>Italian, English and Spanish</b>, light and dark theme, customisable date and time formats.</li>
 <li><b>Guided updates</b>: the app flags new versions and downloads and verifies the right installer, without installing anything without your say-so.</li>
@@ -121,6 +122,16 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <li><b>+1h</b>: duplicates the schedule shifted forward by one hour.</li>
 <li>The <b>Enabled</b> switch suspends a single schedule.</li>
 </ul>
+<h3>8.6 Calendar exceptions</h3>
+<p>Below the schedules, the <b>Calendar exceptions</b> card lists the days on which this task does not run as usual. Pick a day (or a first and a last day, both included), what happens and, if you wish, a note; then <b>+ Add exception</b> and <b>Save</b>.</p>
+<table><tr><th>Mode</th><th>What happens on those days</th></tr>
+<tr><td><b>Skip</b></td><td>nothing is downloaded: production stopped, a holiday (15 August, 25 December).</td></tr>
+<tr><td><b>Treat as another weekday</b></td><td>the day follows the schedules of that weekday. Example: a news agency applies its Sunday timetable on a Wednesday holiday; with <i>Treat as Sunday</i> the "Mon–Fri" schedules stay quiet and the weekend ones run (so keep a weekday and a weekend schedule, each with its own times). A cron expression gives, on that day, the times it has on the nearest day with that weekday of the same week.</td></tr></table>
+<ul>
+<li><b>Several tasks at once:</b> <i>Apply to several tasks…</i> adds the same exception to the tasks you tick, or to a whole category with one click. Each task keeps its own copy, which you can change or remove on its own.</li>
+<li>Holidays are entered <b>by hand</b>: they differ from country to country and not every holiday changes the downloads.</li>
+<li>A skipped day appears as <i>skipped (exception)</i> in the recent activity, with a <i>Skipped today</i> label on the task; it is not a failure: no alert, no error in the statistics or in the summary report. The file name still uses the real date. Manual runs and one-off schedules are not affected; every-N-minutes schedules stop on skipped days and are not moved by <i>Treat as</i>.</li>
+</ul>
 <div class="note">Schedules do not catch up on past times: if the app is off at the scheduled time, that download is not run. Turn on <b>"Warn at startup if schedules were missed"</b> (Settings → Reliability) to be told about it.</div>
 """, True),
 ("Destination and file name", """
@@ -208,16 +219,17 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 """, False),
 ("Notifications: email and Telegram", """
 <p>For downloads that fail after all attempts (and for "stuck source" or missed-schedule alerts) the app can send messages. They are configured in <b>Settings</b>; for each task sending is switched on or off with "Alert by email/Telegram if the download fails…".</p>
+<p>Settings → <b>Alerts</b>. Every message starts with <code>[G-Downloader · name of the installation]</code> (the name is set in Settings → General; if empty, the computer name is used), so with several PCs in the studio you know which one is writing. Each channel is tried three times (right away, after 10 seconds, after 60 seconds) and a failing channel never stops the other. Passwords and the Telegram token never appear in messages or logs.</p>
 <h3>12.1 Email</h3>
-<p>Turn on "Enable email notifications" and fill in SMTP server, port, secure connection (SSL/TLS), user, password, sender and recipients (comma separated). The <b>Send test email</b> button checks the configuration.</p>
+<p>Turn on "Enable email alerts" and fill in SMTP server, port, user, password, sender and recipients (one field, separated by commas, spaces or new lines; at most 20). <b>One message goes to everybody with the recipients in Bcc</b>: nobody sees the others' addresses. With a user name the connection must be encrypted: <i>SSL/TLS from the start</i> (usually port 465) or STARTTLS (usually port 587): the password never travels in clear text. The eye button shows or hides the password. <b>Send test email</b> checks the configuration.</p>
 <h3>12.2 Telegram</h3>
 <ol><li>On Telegram open <b>@BotFather</b>, type <code>/newbot</code> and choose a name and a username ending in "bot".</li>
 <li>BotFather replies with the <b>token</b> (like <code>123456789:AAF…</code>): copy it into "Bot Token". The token is like a password: do not publish it. If it falls into the wrong hands, <code>/revoke</code> in BotFather creates a new one.</li>
 <li>Each recipient needs a <b>Chat ID</b>. <b>Person:</b> they open the bot and press <i>Start</i> (<code>/start</code>), then write to <b>@userinfobot</b>, which replies with their Id (a number). <b>Group or channel:</b> add the bot (for a channel, as administrator) and post a message; the Chat ID starts with <code>-</code> (e.g. <code>-1001234567890</code>) and must be entered with the minus sign.</li>
-<li>In "Recipients" add one row for each, with a note to remember who it is. <b>Send test message</b> checks that it reaches everybody.</li></ol>
+<li>In "Recipients" add one row for each, with a note to remember who it is. <b>Send test message</b> checks that it reaches everybody; if some fail, the error lists them one by one. The token field has the same show/hide eye as the passwords.</li></ol>
 <p>If the bot is already used by other programs (for example Home Assistant) you can use it anyway: G-Downloader only sends messages and does not disturb the others.</p>
 <h3>12.3 Summary report</h3>
-<p>In <i>Settings → Reports and logs</i> you can get a <b>daily</b> (last 24 hours) or <b>weekly</b> (Monday) email summary at the chosen time, with completed/failed downloads and error details. It uses the email configuration.</p>
+<p>In <i>Settings → Alerts → Reports and logs</i> you can get a <b>daily</b> (last 24 hours) or <b>weekly</b> (Monday) email summary at the chosen time, with completed/failed downloads and error details. It uses the email configuration. Days skipped by a calendar exception are not counted as failed.</p>
 """, False),
 ("Reliability and checks", """
 <p>In <i>Settings → Reliability</i> and <i>Performance and checks</i>:</p>
@@ -228,24 +240,38 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <li><b>Missed schedules:</b> at startup reports the times missed because the app was off.</li>
 <li><b>Simultaneous downloads:</b> maximum limit (0 = no limit, 1 = one at a time); extra downloads wait.</li>
 </ul>
+<h3>13.1 Waiting for a file published late</h3>
+<p>If the source puts the file online late, switch on <b>Waiting for the file</b> in the <i>Source</i> card of the task. The task then tries again every N minutes (default 1) for at most M minutes (default 20) from the moment it starts, instead of failing at the first error. For example: a task scheduled at 19:55, trying every minute for 20 minutes, covers the window from 19:55 to 20:15.</p>
+<ul>
+<li>At every attempt the file is checked: an <b>empty or too small</b> file (the minimum is set on the task; if left at 0 the one in Settings → Reliability is used) and a <b>web page instead of the file</b> (an error page saved under the name of the file) count as "not arrived yet".</li>
+<li>For a <b>local or network file</b> the app also waits until its size stops changing (default 5 seconds between two readings), so it does not copy a file that is still being written.</li>
+<li>A wrong user name or password (HTTP 401, FTP 530) stops the wait at once: waiting would not help.</li>
+<li>When the window is over the task fails with the last error, the number of attempts and the minutes waited, and the usual alert is sent.</li>
+<li>While it waits the task counts as running: the next schedule of the same task is skipped (with a warning in the console), and with "Simultaneous downloads" limited it takes a place; <i>Close and install</i> is refused until the wait is over.</li>
+</ul>
 """, False),
 ("Settings", """
 <table><tr><th>Section</th><th>Content</th></tr>
-<tr><td>General</td><td>light/dark theme · language · menu-bar icon (white or blue) · date and time format · start when the computer starts · start minimized · success and error notifications · open the folder when clicking the notification · default destination folder · default retries and wait</td></tr>
-<tr><td>Reliability / Performance</td><td>see chapter 13</td></tr>
-<tr><td>Updates</td><td>see chapter 16 (including the email/Telegram notice)</td></tr>
-<tr><td>Reports and logs</td><td>email report · open the log folder</td></tr>
-<tr><td>Categories and colours</td><td>category colours</td></tr>
-<tr><td>Email / Telegram</td><td>see chapter 12</td></tr>
-<tr><td>Backup</td><td>see chapter 15</td></tr></table>
+<p>The tabs are, in this order, the same in every OnAir Garage app:</p>
+<table><tr><th>Tab</th><th>Content</th></tr>
+<tr><td>General</td><td>light/dark theme · language · date and time format · <b>name of this installation</b> (shown in alerts) · <b>unattended use</b>: start when the computer starts, start minimized, <b>keep the computer awake</b>, menu-bar icon · success and error notifications · open the folder when clicking the notification · default destination folder · default retries and wait</td></tr>
+<tr><td>Reliability</td><td>see chapter 13 (checks, performance, waiting for the file)</td></tr>
+<tr><td>Alerts</td><td>see chapter 12: email report, email and Telegram</td></tr>
+<tr><td>Categories</td><td>colours, <b>rename</b> (if the name exists the two categories merge and keep the colour of the existing one) and <b>delete</b> (asks where the tasks go; tasks are never deleted)</td></tr>
+<tr><td>Updates</td><td>see chapter 16</td></tr>
+<tr><td>Backup</td><td>see chapter 15</td></tr>
+<tr><td>Help &amp; About</td><td>opens the <i>Help and information</i> page: version, licence, links, privacy, <b>Copy support info</b> (version, system, language, installation name, last update check and last error: never settings, addresses, passwords or file names), <b>Open logs folder</b> and the guide</td></tr></table>
+<p>Closing the window keeps the app in the tray (a notice the first time only); starting the app a second time shows the window that is already open; the size and position of the window are remembered.</p>
 <h3>Date and time format</h3>
 <p>The numeric format (day/month order, 24-hour or AM/PM) is chosen separately from the language: Automatic, or 24h DD/MM/YYYY, AM/PM MM/DD/YYYY, ISO 24h YYYY-MM-DD, etc. The <b>names</b> of days and months follow the interface language instead. The time fields of the schedule editor change format after restarting the app.</p>
 """, True),
 ("Backup, transfer and upgrading", """
 <h3>15.1 Export and import</h3>
-<ul><li><b>Backup / Transfer:</b> <i>Settings → Export configuration</i> saves tasks and settings to a file; <i>Import configuration</i> restores them identically on another computer.</li>
-<li><b>Single task:</b> <i>⤓ Export task</i> (in the editor) and <i>⤒ Import</i> (sidebar) share or duplicate a single task.</li></ul>
-<div class="warn">The configuration file also contains any saved SMTP passwords and Telegram tokens: keep it somewhere safe.</div>
+<ul><li><b>Backup / Transfer:</b> <i>Settings → Backup → Export</i> saves tasks, settings, categories and colours to a file named <code>g-downloader-backup-YYYY-MM-DD.json</code>; <i>Import</i> restores them on another computer. The run history, the logs and what the alerts already said are never in the file.</li>
+<li><b>Include passwords and tokens</b> is <b>off</b> by default. Off: the file holds no password, no token, no credentials written in an address (<code>ftp://user:password@host</code>) and no header with a key; after the import the app <b>lists what must be typed again</b>. On: a red warning says the file will hold them in plain text, and the file can be read only by its owner. A password stored with the system protection could not be opened on another PC anyway, so with the box on it is written in plain text.</li>
+<li><b>Import</b> asks <i>Replace everything</i> (settings and tasks become those of the file; tasks already here keep their history) or <i>Add only the missing tasks</i> (tasks this PC does not have are added, switched off; settings and existing tasks stay as they are). A password the file does not carry stays the one of this PC, only for the same server and user. The app checks that the file is a G-Downloader backup, and if it runs programs after a download it <b>shows them and asks</b> before importing: import only files you trust.</li>
+<li><b>Single task:</b> <i>⤓ Export task</i> (in the editor) and <i>⤒ Import</i> (sidebar) share or duplicate a single task: the file holds no password, the imported task is switched off and the app lists what to type again.</li></ul>
+<div class="warn">If you tick "Include passwords and tokens", keep the file somewhere safe and do not share it.</div>
 <h3>15.2 Upgrading from a previous version</h3>
 <ol><li>Export the configuration from the current version (to be safe).</li>
 <li><b>Close the current version with "Quit"</b> from the tray icon menu; if it stays active, with the new one open downloads would run twice.</li>
@@ -255,32 +281,36 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <div class="note">Because the app identifier changed (<code>com.onairgarage.gdownloader</code>), on Windows the installer may not replace the old installation but install next to it: in that case uninstall the old one after checking the new one.</div>
 """, False),
 ("Updates", """
-<p>G-Downloader periodically checks GitHub for a newer version (15 seconds after launch, then every 24 hours) and shows a notice in the top bar; the same notice is available in <i>Settings → Updates</i>, which also has a <b>Check for updates</b> button for a manual check.</p>
+<p>G-Downloader periodically checks GitHub for a newer version (15 seconds after launch, then every 24 hours) and shows a notice in the top bar with the first lines of the release notes; the same notice is available in <i>Settings → Updates</i>, which also shows the date and result of the <b>last check</b> and has a <b>Check now</b> button. The notice has four buttons: <b>Download and install</b>, <b>Remind me later</b> (hides it for 24 hours), <b>Skip this version</b> (hides it until a newer one comes out) and <b>Release notes</b> (the release page).</p>
 <h3>16.1 Downloading and verifying</h3>
-<p>Clicking <b>Download and install</b> makes the app work out the right installer for your system and processor (Intel or Apple Silicon on Mac) by itself and download it to the <b>Downloads</b> folder, showing the percentage and megabytes received. When it finishes it compares the file against the <b>SHA-256</b> published in the release (<code>SHA256SUMS.txt</code>): if it does not match, the file is <b>deleted</b> and a clear error message appears, with the <i>Open download page</i> button as a fallback.</p>
+<p>Clicking <b>Download and install</b> makes the app work out the right installer for your system and processor (Intel or Apple Silicon on Mac) by itself and download it to the <b>Downloads</b> folder, showing a progress bar with percentage and megabytes received and a <b>Cancel</b> button. A download that is cancelled, interrupted or stalled leaves no half-downloaded file behind. When it finishes it compares the file against the <b>SHA-256</b> published in the release (<code>SHA256SUMS.txt</code>): if it does not match, the file is <b>deleted</b> and a clear error message appears, with the <i>Open download page</i> button as a fallback.</p>
 <p>The download's state (available, in progress, ready, error) is <b>the same</b> in the bar and in Settings: you can start it from one place and follow it from the other. While a download is running, the <i>Check for updates</i> button stays disabled.</p>
 <h3>16.2 Notice by email and Telegram too</h3>
-<p>For machines left alone in a machine room, when an automatic check finds a new version the app sends <b>one message per version</b> through the channels already set up for failures (email and/or Telegram), with the version number and the release link. It only works if at least one of the two channels is on; it can be switched off in <i>Settings → Updates</i> ("Also notify me by email/Telegram…"). The manual check never sends messages.</p>
+<p>For machines left alone in a machine room, when an automatic check finds a new version the app tells you <b>once per version and per channel</b> (desktop notice, Telegram, email), with the version number and the release link. Telegram and email only if they are set up; it can be switched off in <i>Settings → Updates</i> ("Also notify me by email/Telegram…"). A channel counts as told only after the message was delivered: a failed send is tried again at the next check, and what was told is remembered across restarts (file <code>alert-state.json</code>). The manual check never sends messages.</p>
 <h3>16.3 Finishing the installation</h3>
 <p>Once verified, a green button appears, different per system:</p>
 <table><tr><th>System</th><th>Button</th><th>What happens</th></tr>
 <tr><td>Windows</td><td>Close and install</td><td>the app closes itself (scheduled downloads stop) and starts the installer; it reopens by itself when done.</td></tr>
 <tr><td>macOS</td><td>Open installer</td><td>opens the downloaded <code>.dmg</code> file. Quit G-Downloader with "Quit" from the menu-bar icon and drag the new version into Applications, just like on first launch.</td></tr>
 <tr><td>Linux</td><td>Open installer</td><td>shows the downloaded <code>.AppImage</code> file in its folder. Quit G-Downloader with "Quit" and start the new file.</td></tr></table>
-<div class="note">Nothing installs by itself: the green button always has to be pressed on purpose. On macOS and Linux the app cannot replace itself: the manual step above is still needed, just as for a first installation.</div>
+<p><b>Before installing</b> the app makes a safety copy of its data file in the <code>backups</code> folder (<code>pre-update-&lt;version&gt;.json</code>, the last 3 are kept): it is not an export and is meant for this PC only. If downloads are running, the button is refused with the reason: closing now would interrupt them; try again when they are over.</p>
+<h3>16.4 After the update</h3>
+<p>At the first start of the new version the app shows <i>Updated to G-Downloader X</i> and a <b>What's new</b> window with the points of that version, once.</p>
+<div class="note">Nothing installs by itself: the green button always has to be pressed on purpose. On macOS and Linux the app cannot replace itself: the manual step above is still needed, just as for a first installation. On Windows the installer starts the new version again at the end; this has been written into the installer but not yet checked on a real Windows PC.</div>
 """, False),
 ("Logs and history", """
 <ul><li><b>Console:</b> real time, at the bottom of the window (cleared on restart).</li>
 <li><b>Task history:</b> the last 50 attempts of each task, visible on the cards and in the dashboard.</li>
 <li><b>Daily statistics:</b> permanent counters (about 13 months) for the charts.</li>
-<li><b>Log files:</b> one file per day, kept for 30 days, in the <code>logs</code> folder of the app data (<i>Open log folder</i> button in Settings). Each line carries date, level, task and message.</li></ul>
+<li><b>Log files:</b> one file per day, 5 MB at most each (a full file is closed and a new one starts), the last 7 days kept, in the <code>logs</code> folder of the app data (<i>Open logs folder</i> button in Help and information). Each line carries date, level, task and message; credentials written inside addresses are hidden.</li>
+<li><b>Skipped days:</b> a day skipped by a calendar exception is noted once per task in the history as <i>skipped</i>; it does not change the last result and is not counted in the statistics.</li></ul>
 """, False),
 ("Where the data is", """
 <table><tr><th>System</th><th>Folder</th></tr>
 <tr><td>Windows</td><td><code>%APPDATA%\\g-downloader</code></td></tr>
 <tr><td>macOS</td><td><code>~/Library/Application Support/g-downloader</code></td></tr>
 <tr><td>Linux</td><td><code>~/.config/g-downloader</code></td></tr></table>
-<p>It holds the tasks and settings file and the <code>logs</code> folder. Passwords and tokens are stored encrypted with the computer's and user's protection system: they cannot be read if you copy the data to another PC (in that case they must be entered again).</p>
+<p>It holds the tasks and settings file, <code>alert-state.json</code> (what the alerts already said), the <code>backups</code> folder (safety copies made before an update) and the <code>logs</code> folder. Passwords, tokens and credentials written inside addresses are stored encrypted with the computer's and user's protection system: they cannot be read if you copy the data to another PC (in that case they must be entered again; the Backup box "Include passwords and tokens" exists for that).</p>
 """, False),
 ("Troubleshooting", """
 <table><tr><th>Problem</th><th>What to do</th></tr>
@@ -290,7 +320,8 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <tr><td>The download does not start at the scheduled time</td><td>Check that the app is running (tray icon), that the task and schedule are enabled, and look at <i>Preview</i> and the console. Turn on the missed-schedules alert.</td></tr>
 <tr><td>401/403 error from the server</td><td>Check the username and password in the Source card.</td></tr>
 <tr><td>FTP: "550 file not found"</td><td>Read the message: it shows the login folder and the files present; fix the path or wait for the file to be published. Remember the double slash for absolute paths.</td></tr>
-<tr><td>The downloaded file is an error page</td><td>Turn on "Check that the downloaded file isn't too small" and set the minimum size.</td></tr>
+<tr><td>The downloaded file is an error page, or the file is published late</td><td>Turn on "Waiting for the file" in the task (chapter 13.1): empty files, too small ones and web pages are tried again until the window is over. Or turn on "Check that the downloaded file isn't too small" in Settings.</td></tr>
+<tr><td>A download did not run on a holiday</td><td>Look at the <i>Calendar exceptions</i> of the task (chapter 8.6) and at the <i>skipped (exception)</i> note in the recent activity.</td></tr>
 <tr><td>Passwords disappeared after a transfer</td><td>They are tied to the user and the computer: enter them again.</td></tr>
 <tr><td>Email/Telegram not arriving</td><td>Use the test buttons in Settings and check the error message.</td></tr>
 <tr><td>Downloads running twice</td><td>Two copies of the app are probably open (old and new): close the one you do not need with "Quit".</td></tr>
