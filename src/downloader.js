@@ -10,11 +10,15 @@ import { dialog, Notification, BrowserWindow, shell } from 'electron';
 import { resolveTemplate, filenameFromUrl, cleanPath } from './templates.js';
 import { getTask, saveTask, getSettings, bumpSeq, appendHistory } from './store.js';
 import { runPostActions, previewAction } from './actions.js';
-import { notifyFailure, notifyAlert } from './notifications.js';
+import { notifier } from './services.js';
+import { waitWindowOf, checkArrived, retryWithin, waitStable, WaitExpired } from './waitwindow.js';
 import { httpFetch } from './httpfetch.js';
 import { M } from './i18n.js';
 
 export const events = new EventEmitter();
+
+// Replaced only by the tests: a fake clock for the waiting window (src/waitwindow.js).
+export const waitHooks = { sleep: undefined, now: undefined };
 
 function log(taskId, message, level = 'info') {
   const entry = { taskId, message, level, ts: new Date().toISOString() };
@@ -84,7 +88,7 @@ async function downloadToFile(url, tempPath, http, onProgress) {
       if (onProgress) onProgress(received, total);
     });
     await pipeline(nodeStream, fs.createWriteStream(tempPath));
-    return { bytes: received };
+    return { bytes: received, contentType: res.headers.get('content-type') || '' };
   } finally {
     clearTimeout(timeout);
   }
@@ -148,19 +152,26 @@ function isFtpUrl(url) {
 // is treated as a failed attempt (same retry path as a network error) instead of a
 // silent success — catches the case where the source hasn't dropped the real file yet
 // and returns an empty/placeholder response.
+function progressReporter(taskId) {
+  return (received, total) => {
+    if (total) events.emit('progress', { taskId, received, total, pct: Math.round((received / total) * 100) });
+  };
+}
+
+// One attempt: fetch the file into tempPath. Returns { bytes, contentType }.
+async function downloadOnce(taskId, url, tempPath, http) {
+  const onProgress = progressReporter(taskId);
+  return isFtpUrl(url) ? ftpDownloadToFile(url, tempPath, http, onProgress) : downloadToFile(url, tempPath, http, onProgress);
+}
+
 async function downloadWithRetries(taskId, url, tempPath, http, minBytes) {
   const retries = Math.max(0, Number(http.retries) || 0);
   const retryDelayMs = Math.max(0, Number(http.retryDelayMs) || 15000);
-  const onProgress = (received, total) => {
-    if (total) events.emit('progress', { taskId, received, total, pct: Math.round((received / total) * 100) });
-  };
   let lastError = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       if (attempt > 0) log(taskId, M("Nuovo tentativo {attempt}/{retries}...", { attempt: attempt, retries: retries }));
-      const result = isFtpUrl(url)
-        ? await ftpDownloadToFile(url, tempPath, http, onProgress)
-        : await downloadToFile(url, tempPath, http, onProgress);
+      const result = await downloadOnce(taskId, url, tempPath, http);
       if (minBytes > 0 && result.bytes < minBytes) {
         throw new Error(M("File troppo piccolo ({bytes} byte, minimo richiesto {min})", { bytes: result.bytes, min: minBytes }));
       }
@@ -174,8 +185,53 @@ async function downloadWithRetries(taskId, url, tempPath, http, minBytes) {
   throw lastError;
 }
 
+// The file is published late: try again every few minutes within the window of the task (src/waitwindow.js). Each
+// attempt is checked (too small, a web page instead of the file); a wrong password stops at once.
+async function fetchWithinWindow(taskId, ww, attempt, fileName) {
+  try {
+    return await retryWithin({
+      everyMs: ww.everyMs,
+      maxMs: ww.maxMs,
+      sleep: waitHooks.sleep,
+      now: waitHooks.now,
+      attempt: async (n) => {
+        const result = await attempt(n);
+        const problem = checkArrived({ bytes: result.bytes, contentType: result.contentType, fileName, minBytes: ww.minBytes, rejectWebPage: ww.rejectWebPage });
+        if (problem === 'too-small') throw new Error(M("File troppo piccolo ({bytes} byte, minimo richiesto {min})", { bytes: result.bytes, min: Math.max(ww.minBytes, 1) }));
+        if (problem === 'web-page') throw new Error(M("Il server ha risposto con una pagina web invece del file"));
+        return result;
+      },
+      onWait: (n, err, everyMs, leftMs) =>
+        log(taskId, M("File non ancora disponibile ({message}): riprovo tra {every} min, ancora {left} min di attesa (tentativo {n}).", { message: err.message, every: Math.max(1, Math.round(everyMs / 60_000)), left: Math.max(1, Math.round(leftMs / 60_000)), n }), 'warn')
+    });
+  } catch (err) {
+    if (err instanceof WaitExpired) {
+      throw new Error(M("{message} — il file non è arrivato entro {min} minuti ({n} tentativi).", { message: err.message, min: Math.round(ww.maxMs / 60_000), n: err.attempts }), { cause: err.cause });
+    }
+    throw err;
+  }
+}
+
 // For broadcast workflows: the newscast file may not be dropped on disk/network share yet.
 // Retries wait retryDelayMs between checks, same knobs as the HTTP path.
+async function copyLocalOnce(sourcePath, tempPath, ww = null) {
+  let stat;
+  try {
+    stat = await fsp.stat(sourcePath);
+  } catch (err) {
+    throw err.code === 'ENOENT' ? new Error(M("File non trovato: {path}", { path: sourcePath })) : err;
+  }
+  if (!stat.isFile()) throw new Error(M("Il percorso indicato non è un file"));
+  // a file still being written on a network folder keeps changing size: wait until it stays the same
+  if (ww?.enabled && ww.stableMs) {
+    await waitStable({ stableMs: ww.stableMs, sizeOf: async () => (await fsp.stat(sourcePath)).size }).catch((e) => {
+      throw e.message === 'still-growing' ? new Error(M("Il file sta ancora cambiando dimensione (copia in corso?)")) : e;
+    });
+  }
+  await fsp.copyFile(sourcePath, tempPath);
+  return { bytes: (await fsp.stat(tempPath)).size, contentType: '' };
+}
+
 async function copyLocalWithRetries(taskId, sourcePath, tempPath, http) {
   const retries = Math.max(0, Number(http.retries) || 0);
   const retryDelayMs = Math.max(0, Number(http.retryDelayMs) || 15000);
@@ -183,12 +239,9 @@ async function copyLocalWithRetries(taskId, sourcePath, tempPath, http) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       if (attempt > 0) log(taskId, M("File non ancora disponibile, nuovo tentativo {attempt}/{retries}...", { attempt: attempt, retries: retries }));
-      const stat = await fsp.stat(sourcePath);
-      if (!stat.isFile()) throw new Error(M("Il percorso indicato non è un file"));
-      await fsp.copyFile(sourcePath, tempPath);
-      return { bytes: stat.size };
+      return await copyLocalOnce(sourcePath, tempPath);
     } catch (err) {
-      lastError = err.code === 'ENOENT' ? new Error(M("File non trovato: {path}", { path: sourcePath })) : err;
+      lastError = err;
       log(taskId, M("Tentativo {attempt} fallito: {message}", { attempt: attempt + 1, message: lastError.message }), 'warn');
       if (attempt < retries) await sleep(retryDelayMs);
     }
@@ -749,7 +802,7 @@ async function runActionsOnly(taskId, opts) {
     if (settings.notifyOnError && Notification.isSupported()) {
       new Notification({ title: M("Errore: {name}", { name: task.name }), body: err.message }).show();
     }
-    if (task.notifyOnFailure !== false) await notifyFailure(settings, task, err, emitLog);
+    if (task.notifyOnFailure !== false) void notifier.failure(task, err);
     events.emit('task-finished', { taskId, status: 'error', error: err.message });
     throw err;
   }
@@ -804,10 +857,23 @@ async function runTaskInner(taskId, opts = {}) {
       httpConfig.resolvedBody = resolveTemplate(httpConfig.body, ctx0);
     }
 
-    const minBytes = settings.checkMinFileSize ? Math.max(0, Number(settings.minFileSizeKB) || 0) * 1024 : 0;
-    const { bytes } = isLocal
-      ? await copyLocalWithRetries(taskId, resolvedUrl, tempPath, httpConfig)
-      : await downloadWithRetries(taskId, resolvedUrl, tempPath, httpConfig, minBytes);
+    const globalMinKB = settings.checkMinFileSize ? Math.max(0, Number(settings.minFileSizeKB) || 0) : 0;
+    const minBytes = globalMinKB * 1024;
+    const ww = waitWindowOf(task, globalMinKB);
+    // opts.mode === 'download'/'actions' and manual runs behave the same: the window is part of getting the file
+    const { bytes } = ww.enabled
+      ? await fetchWithinWindow(
+          taskId,
+          ww,
+          async () => {
+            await fsp.rm(tempPath, { force: true });
+            return isLocal ? copyLocalOnce(resolvedUrl, tempPath, ww) : downloadOnce(taskId, resolvedUrl, tempPath, httpConfig);
+          },
+          filename
+        )
+      : isLocal
+        ? await copyLocalWithRetries(taskId, resolvedUrl, tempPath, httpConfig)
+        : await downloadWithRetries(taskId, resolvedUrl, tempPath, httpConfig, minBytes);
     emitLog(M("Download completato ({bytes} byte).", { bytes: bytes }));
 
     const expected = String(task.expectedSha256 || '').trim().toLowerCase();
@@ -859,7 +925,7 @@ async function runTaskInner(taskId, opts = {}) {
       if (staleLimit > 0 && task.unchangedStreak === staleLimit) {
         const text = M("Il task \"{name}\" ha scaricato {n} volte di fila lo stesso identico file: la fonte potrebbe essere ferma.", { name: task.name, n: staleLimit + 1 });
         emitLog(text, 'warn');
-        await notifyAlert(settings, M("[G-Downloader] Fonte ferma? {name}", { name: task.name }), text, emitLog);
+        void notifier.broadcast(M("Fonte ferma? {name}", { name: task.name }), text);
       }
     }
 
@@ -881,7 +947,7 @@ async function runTaskInner(taskId, opts = {}) {
       const text = M("Il file del task \"{name}\" è pronto ({file}). Le azioni successive aspettano la tua conferma: premi \"Esegui azioni\" nell'app.", { name: task.name, file: path.basename(finalPath) });
       emitLog(text, 'warn');
       if (Notification.isSupported()) new Notification({ title: task.name, body: text }).show();
-      await notifyAlert(settings, M("[G-Downloader] File pronto: {name}", { name: task.name }), text, emitLog);
+      void notifier.broadcast(M("File pronto: {name}", { name: task.name }), text);
     } else {
       await runPostActions(task.postActions, actionCtx, (msg, level) => emitLog(msg, level));
       clearPendingActions(taskId);
@@ -917,7 +983,7 @@ async function runTaskInner(taskId, opts = {}) {
       new Notification({ title: M("Errore: {name}", { name: task.name }), body: err.message }).show();
     }
     if (task.notifyOnFailure !== false) {
-      await notifyFailure(settings, task, err, emitLog);
+      void notifier.failure(task, err);
     }
     events.emit('task-finished', { taskId, status: 'error', error: err.message });
     throw err;

@@ -1,7 +1,22 @@
 import Store from 'electron-store';
+import fs from 'node:fs';
+import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { app, safeStorage } from 'electron';
 import { M } from './i18n.js';
+import { defaults, sanitizeSettings, validRepo, UPDATE_REPO } from './settings.js';
+import { SEALED_PREFIX, mapTaskSecrets, mapSettingsSecrets } from './secrets.js';
+import { normalizeExceptions } from './exceptions.js';
+
+// Read before the store is created: creating it writes the file with its defaults.
+// A settings file existed before this start: the first start of a new version then counts as an update, not as a new installation.
+export const hadSettingsFile = (() => {
+  try {
+    return fs.existsSync(path.join(app.getPath('userData'), 'g-downloader-data.json'));
+  } catch {
+    return false;
+  }
+})();
 
 const store = new Store({
   name: 'g-downloader-data',
@@ -11,70 +26,38 @@ const store = new Store({
     lastReportSentAt: null,
     dailyStats: {},
     dailyStatsBackfilled: false,
-    settings: {
-      startOnBoot: true,
-      startMinimized: false,
-      notifyOnSuccess: true,
-      notifyOnError: true,
-      defaultDestination: '',
-      themeMode: 'dark', // 'dark' | 'light'
-      trayIconStyle: process.platform === 'darwin' ? 'white' : 'color', // 'white' (macOS template) | 'color' (brand blue) — blue is the right default on Windows/Linux
-      formatPreset: 'auto', // 'auto' (from language) | 'it' | 'us' | 'gb' | 'iso' | 'au' — date order + 12/24h
-      language: 'it', // 'it' | 'en' | 'es' — used by the Guida/Help section
-      defaultRetries: 3,
-      defaultRetryDelayMs: 15000,
-      openFolderOnNotificationClick: false,
-      checkMinFileSize: false,
-      minFileSizeKB: 1,
-      warnIfUnchanged: false,
-      staleAlertRuns: 0, // 0 = off; otherwise alert after N consecutive identical downloads
-      maxParallelDownloads: 0, // 0 = unlimited; 1 = one download at a time
-      checkUpdates: true,
-      notifyNewVersion: true, // one email/Telegram message per new version (only if one of them is on)
-      lastNotifiedVersion: '',
-      updateRepo: 'djgragra/g-downloader',
-      watchdogMissedSchedules: false,
-      reportFrequency: 'off', // 'off' | 'daily' | 'weekly'
-      reportHour: 7,
-      notifications: {
-        email: {
-          enabled: false,
-          host: '',
-          port: 587,
-          secure: false,
-          user: '',
-          pass: '',
-          from: '',
-          to: ''
-        },
-        telegram: {
-          enabled: false,
-          botToken: '',
-          chatId: '', // legacy single recipient, superseded by recipients
-          recipients: [] // [{ chatId, note }]
-        }
-      }
-    }
+    // kept apart from the settings on purpose: not part of a backup, not reset by an import
+    updateState: { skipVersion: '', remindUntil: 0, lastCheck: null },
+    lastSeenVersion: '',
+    closeHintShown: false,
+    settings: defaults()
   }
 });
 
-// Saved settings keep whatever updates repository an older version stored (defaults only fill
-// missing keys): the retired 'djgragra/g-downloader-releases', an empty or a malformed value.
-// The field is not editable in the UI, so anything that is not a valid 'owner/repo' is reset.
+export const settingsFile = () => store.path;
+
+// Whatever is on disk goes through the same validation as imported files (older versions saved a partial object,
+// `email.to` as one string, a retired updates repository…). Secrets stay as they are: sealed, or plain until sealed.
 {
-  const repo = store.get('settings.updateRepo');
-  if (repo === 'djgragra/g-downloader-releases' || !/^[\w.-]+\/[\w.-]+$/.test(repo || '')) {
-    store.set('settings.updateRepo', 'djgragra/g-downloader');
-  }
+  const legacy = store.get('settings') || {};
+  const clean = sanitizeSettings(legacy, defaults());
+  // the memory of the new-version notice moved to alert-state.json: main reads this value once and then it goes away
+  if (typeof legacy.lastNotifiedVersion === 'string' && legacy.lastNotifiedVersion) store.set('legacyNotifiedVersion', legacy.lastNotifiedVersion);
+  store.set('settings', clean);
+}
+if (!validRepo(store.get('settings.updateRepo'))) store.set('settings.updateRepo', UPDATE_REPO);
+
+export function takeLegacyNotifiedVersion() {
+  const v = store.get('legacyNotifiedVersion') || '';
+  store.delete('legacyNotifiedVersion');
+  return v;
 }
 
 // ---- secrets at rest -------------------------------------------------------------
-// Passwords and tokens are encrypted with the OS keystore (Windows DPAPI / macOS Keychain /
-// libsecret) via Electron safeStorage. Readers get plain values; the file on disk holds
-// "enc:v1:<base64>". If the keystore is unavailable, values stay as they were (plain).
-const PREFIX = 'enc:v1:';
-
-function canSeal() {
+// Passwords, tokens and credentials written in addresses are encrypted with the OS keystore (Windows DPAPI / macOS
+// Keychain / libsecret) via Electron safeStorage. Readers get plain values; the file on disk holds "enc:v1:<base64>".
+// The list of what is a secret is src/secrets.js. If the keystore is unavailable, values stay as they were (plain).
+export function canSeal() {
   try {
     return app.isReady() && safeStorage.isEncryptionAvailable();
   } catch {
@@ -83,38 +66,36 @@ function canSeal() {
 }
 
 function seal(v) {
-  if (typeof v !== 'string' || !v || v.startsWith(PREFIX) || !canSeal()) return v;
-  return PREFIX + safeStorage.encryptString(v).toString('base64');
+  if (typeof v !== 'string' || !v || v.startsWith(SEALED_PREFIX) || !canSeal()) return v;
+  return SEALED_PREFIX + safeStorage.encryptString(v).toString('base64');
 }
 
 function open(v) {
-  if (typeof v !== 'string' || !v.startsWith(PREFIX)) return v;
+  if (typeof v !== 'string' || !v.startsWith(SEALED_PREFIX)) return v;
   try {
-    return safeStorage.decryptString(Buffer.from(v.slice(PREFIX.length), 'base64'));
+    return safeStorage.decryptString(Buffer.from(v.slice(SEALED_PREFIX.length), 'base64'));
   } catch {
     return ''; // keystore changed (other user/PC): the secret must be typed again
   }
 }
 
-function mapTaskSecrets(task, fn) {
-  const t = structuredClone(task);
-  if (t?.http?.auth?.password) t.http.auth.password = fn(t.http.auth.password);
-  return t;
-}
-
-function mapSettingsSecrets(settings, fn) {
-  const s = structuredClone(settings);
-  const n = s.notifications;
-  if (n?.email?.pass) n.email.pass = fn(n.email.pass);
-  if (n?.telegram?.botToken) n.telegram.botToken = fn(n.telegram.botToken);
-  return s;
-}
-
 // Rewrites data saved by older versions (plain) in encrypted form. Call once after app ready.
 export function migrateSecrets() {
-  if (!canSeal()) return;
+  if (!canSeal()) return false;
   store.set('tasks', store.get('tasks').map((t) => mapTaskSecrets(t, seal)));
   store.set('settings', mapSettingsSecrets(store.get('settings'), seal));
+  return true;
+}
+
+// Sealed values on disk that cannot be opened here (the file came from another PC or account): the slots to type again.
+export function unreadableSecrets() {
+  const out = [];
+  const raw = store.get('settings');
+  for (const id of ['email.pass', 'telegram.botToken']) {
+    const v = id === 'email.pass' ? raw.notifications?.email?.pass : raw.notifications?.telegram?.botToken;
+    if (typeof v === 'string' && v.startsWith(SEALED_PREFIX) && !open(v)) out.push(id);
+  }
+  return out;
 }
 
 export function getSettings() {
@@ -142,10 +123,28 @@ export function setWindowBounds(bounds) {
 }
 
 export function updateSettings(patch) {
-  const next = { ...getSettings(), ...patch };
+  const next = sanitizeSettings(patch, getSettings());
   store.set('settings', mapSettingsSecrets(next, seal));
   return next;
 }
+
+export function replaceSettings(settings) {
+  const next = sanitizeSettings(settings, defaults());
+  store.set('settings', mapSettingsSecrets(next, seal));
+  return next;
+}
+
+// ---- what the app remembers apart from the settings ----
+export const getUpdateState = () => ({ skipVersion: '', remindUntil: 0, lastCheck: null, ...(store.get('updateState') || {}) });
+export function setUpdateState(patch) {
+  const next = { ...getUpdateState(), ...patch };
+  store.set('updateState', next);
+  return next;
+}
+export const getLastSeenVersion = () => store.get('lastSeenVersion') || '';
+export const setLastSeenVersion = (v) => store.set('lastSeenVersion', String(v || ''));
+export const getCloseHintShown = () => !!store.get('closeHintShown');
+export const setCloseHintShown = () => store.set('closeHintShown', true);
 
 export function getTasks() {
   return store.get('tasks').map((t) => mapTaskSecrets(t, open));
@@ -159,6 +158,7 @@ export function getTask(id) {
 export function saveTask(task) {
   const tasks = store.get('tasks');
   const idx = tasks.findIndex((t) => t.id === task.id);
+  task.exceptions = normalizeExceptions(task.exceptions);
   const stored = mapTaskSecrets(task, seal);
   if (idx >= 0) {
     tasks[idx] = stored;
@@ -206,6 +206,9 @@ export function newTaskTemplate() {
     },
     notifyOnFailure: true,
     runOnSave: false,
+    exceptions: [], // [{id, from, to, mode:'skip'|'treat', treatAs, note}]: calendar exceptions (src/exceptions.js)
+    // wait for a file that is published late: retry every N minutes for at most M minutes (src/waitwindow.js)
+    waitWindow: { enabled: false, everyMinutes: 1, maxMinutes: 20, minSizeKB: 0, rejectWebPage: true, stableSeconds: 5 },
     schedules: [], // [{id, type:'cron'|'once'|'interval', expr, datetime, everyMinutes, enabled}]
     postActions: [], // [{id, type:'rename'|'run'|'move'|'open'|'notify', ...}]
     seqCounter: 0,
@@ -269,10 +272,13 @@ function recordStat(taskId, entry) {
   store.set('dailyStats', stats);
 }
 
+// Runs that do not count as downloads: parts of a run (actions only, cleanup only) and days skipped by an exception.
+const NOT_A_DOWNLOAD = new Set(['actions', 'cleanup', 'skipped']);
+
 export function appendHistory(id, entry) {
   const task = getTask(id);
   if (!task) return;
-  if (entry.mode !== 'actions' && entry.mode !== 'cleanup') recordStat(id, entry); // only downloads count
+  if (!NOT_A_DOWNLOAD.has(entry.mode)) recordStat(id, entry); // only downloads count
   task.history = [entry, ...(task.history || [])].slice(0, 50);
   task.lastRun = entry.finishedAt;
   task.lastStatus = entry.status;
@@ -280,59 +286,46 @@ export function appendHistory(id, entry) {
   saveTask(task);
 }
 
-export function exportConfig() {
-  return {
-    app: 'g-downloader',
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    tasks: store.get('tasks'),
-    settings: store.get('settings')
-  };
+// A day on which a calendar exception kept the task from running. It shows in the history ("skipped"), but it is not
+// a run: it changes neither the last result, nor the statistics, nor the failure count.
+export function appendSkipped(id, { finishedAt, note }) {
+  const task = getTask(id);
+  if (!task) return;
+  task.history = [{ startedAt: finishedAt, finishedAt, status: 'skipped', mode: 'skipped', note }, ...(task.history || [])].slice(0, 50);
+  saveTask(task);
 }
 
-export function exportTask(id) {
+// ---- the whole configuration (backup, restore) ----
+export function getConfig() {
+  return { settings: getSettings(), tasks: getTasks() };
+}
+
+// Applies what src/backup.js prepared: `settings` and `tasks` are the plain final data.
+export function applyConfig({ settings, tasks }, { replaceSettingsToo = true } = {}) {
+  if (replaceSettingsToo && settings) store.set('settings', mapSettingsSecrets(sanitizeSettings(settings, defaults()), seal));
+  store.set('tasks', tasks.map((t) => mapTaskSecrets({ ...t, exceptions: normalizeExceptions(t.exceptions) }, seal)));
+  return getConfig();
+}
+
+// Replaces the tasks that changed (category rename / delete) and the colours map. Items are plain.
+export function applyCategoryChange({ changed, colors }) {
+  const byId = new Map(changed.map((t) => [t.id, t.category]));
+  const tasks = store.get('tasks').map((raw) => (byId.has(raw.id) ? { ...raw, category: byId.get(raw.id) } : raw));
+  store.set('tasks', tasks);
+  store.set('settings.categoryColors', colors);
+  return getConfig();
+}
+
+// Adds tasks prepared by src/backup.js (new ids, switched off, no history). Returns them.
+export function addTasks(list) {
+  for (const t of list) saveTask(t);
+  return list;
+}
+
+export function exportTaskData(id) {
   const task = getTask(id);
   if (!task) throw new Error(M("Task non trovato"));
-  return { app: 'g-downloader', version: 1, exportedAt: new Date().toISOString(), task };
-}
-
-// Imported task gets a fresh id/history so it never collides with (or overwrites)
-// an existing task, even if the same file is imported twice or shared between PCs.
-export function importTask(data) {
-  // A file may carry several tasks ({ tasks: [...] }): import them all, return the first.
-  if (data && Array.isArray(data.tasks)) {
-    const imported = data.tasks.map((t) => importTask({ task: t }));
-    if (!imported.length) throw new Error(M("Il file non contiene task"));
-    return Object.assign(imported[0], { _count: imported.length });
-  }
-  const task = data && data.task && typeof data.task === 'object' ? data.task : data;
-  if (!task || typeof task !== 'object' || !task.name) throw new Error(M("File task non valido"));
-  const imported = {
-    ...task,
-    id: randomUUID(),
-    enabled: false, // imported tasks start switched off, so they can be checked before they run
-    seqCounter: 0,
-    lastRun: null,
-    lastStatus: null,
-    lastError: null,
-    lastFileHash: null,
-    pendingActions: undefined, // a download waiting for its actions belongs to the exporting PC
-    history: [],
-    // Same as editing a schedule in the UI: only occurrences after the import count,
-    // so importing at 10:20 does not immediately fire the 9:57 slot.
-    schedules: (task.schedules || []).map((s) => ({ ...s, lastFired: new Date().toISOString(), fired: false }))
-  };
-  saveTask(imported);
-  return imported;
-}
-
-export function importConfig(data) {
-  if (!data || typeof data !== 'object') throw new Error(M("File di configurazione non valido"));
-  if (Array.isArray(data.tasks)) store.set('tasks', data.tasks.map((t) => mapTaskSecrets(t, seal)));
-  if (data.settings && typeof data.settings === 'object') {
-    store.set('settings', mapSettingsSecrets({ ...getSettings(), ...data.settings }, seal));
-  }
-  return { tasks: store.get('tasks'), settings: store.get('settings') };
+  return task;
 }
 
 export default store;

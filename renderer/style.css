@@ -941,13 +941,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 
 .update-banner {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px 16px;
   background: var(--accent, #4f7cff);
   color: #fff;
   font-size: 13px;
 }
+.update-banner-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.update-notes { white-space: pre-line; font-size: 12px; opacity: .92; max-height: 6.5em; overflow: auto; }
 .update-banner .update-banner-text { flex: 1; }
 .update-banner.ready { background: #17845c; }
 .update-banner.error { background: #b8303c; }
@@ -994,3 +996,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .task-list-head { display: flex; align-items: center; justify-content: space-between; padding-right: 10px; }
 .task-list-head .task-list-header { flex: 1; min-width: 0; }
 #task-toolbar-toggle.view-active { color: var(--accent); border-color: var(--accent); }
+
+/* settings tabs, same names and order in every OnAir Garage app */
+.settings-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 14px; border-bottom: 1px solid var(--border); }
+.settings-tab { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--text-dim); padding: 8px 12px; cursor: pointer; font-size: 13px; }
+.settings-tab:hover { color: var(--text); }
+.settings-tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.settings-sub { margin: 16px 0 6px; font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+.activity-dot.skip { background: var(--text-dim); }
+.badge-exc { background: rgba(230,180,80,.18); color: var(--warn); margin-left: 4px; }
+.exception-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.exception-row.active .exception-text { color: var(--warn); font-weight: 600; }
+.exception-text { flex: 1; }
+.apply-list { max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin: 6px 0 10px; }
+.apply-group { margin-bottom: 8px; }
+.apply-task { display: flex; margin-left: 22px; }
+.whatsnew-list { margin: 8px 0 14px 18px; padding: 0; line-height: 1.5; }
+.about-links { margin: 6px 0 0 18px; padding: 0; line-height: 1.8; }
+.wait-window { margin-top: 6px; }

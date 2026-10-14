@@ -7,7 +7,8 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <li>URL e nomi file <b>dinamici</b>: data, ora, contatore, valori casuali, scostamenti (es. «l'ora successiva»).</li>
 <li>Più <b>pianificazioni</b> per ogni task: giorni della settimana e orari, una tantum, ogni N secondi/minuti/ore/giorni, oppure espressione cron.</li>
 <li><b>Azioni</b> prima e dopo il download: pulizia della cartella, rinomina dei file preesistenti, esecuzione di programmi o script, spostamento, apertura, notifiche.</li>
-<li><b>Tentativi automatici</b> in caso di errore e avvisi via <b>email</b> e <b>Telegram</b>; report riepilogativo periodico.</li>
+<li><b>Tentativi automatici</b> in caso di errore, <b>attesa di un file pubblicato in ritardo</b> (capitolo 13.1) e avvisi via <b>email</b> e <b>Telegram</b>; report riepilogativo periodico.</li>
+<li><b>Eccezioni di calendario</b>: salta un giorno, oppure fallo seguire le pianificazioni di un altro giorno della settimana (capitolo 8.6).</li>
 <li><b>Dashboard</b> con statistiche e grafici, categorie con colori, storico, log su file.</li>
 <li>Interfaccia in <b>italiano, inglese e spagnolo</b>, tema chiaro e scuro, formati di data e ora personalizzabili.</li>
 <li><b>Aggiornamenti guidati</b>: l'app segnala le nuove versioni e scarica e verifica l'installer giusto, senza installarlo senza il tuo consenso.</li>
@@ -121,6 +122,16 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <li><b>+1h</b>: duplica la pianificazione spostandola avanti di un'ora.</li>
 <li>L'interruttore <b>Attiva</b> sospende una singola pianificazione.</li>
 </ul>
+<h3>8.6 Eccezioni di calendario</h3>
+<p>Sotto le pianificazioni, la scheda <b>Eccezioni di calendario</b> elenca i giorni in cui questo task non gira come al solito. Scegli un giorno (oppure un primo e un ultimo giorno, entrambi inclusi), che cosa succede e, se vuoi, una nota; poi <b>+ Aggiungi eccezione</b> e <b>Salva</b>.</p>
+<table><tr><th>Modo</th><th>Che cosa succede in quei giorni</th></tr>
+<tr><td><b>Salta</b></td><td>non si scarica nulla: produzione ferma, festività (Ferragosto, 25 dicembre).</td></tr>
+<tr><td><b>Tratta come un altro giorno della settimana</b></td><td>il giorno segue le pianificazioni di quel giorno. Esempio: un'agenzia di notizie applica il palinsesto della domenica a un mercoledì festivo; con <i>Tratta come domenica</i> le pianificazioni «lun–ven» restano ferme e partono quelle del weekend (tieni quindi una pianificazione feriale e una del weekend, ognuna con i suoi orari). Un'espressione cron dà, in quel giorno, gli orari che ha nel giorno più vicino con quel giorno della settimana, nella stessa settimana.</td></tr></table>
+<ul>
+<li><b>Più task insieme:</b> <i>Applica a più task…</i> aggiunge la stessa eccezione ai task che spunti, oppure a un'intera categoria con un clic. Ogni task conserva la sua copia, che puoi cambiare o togliere da sola.</li>
+<li>Le festività si inseriscono <b>a mano</b>: cambiano da Paese a Paese e non tutte cambiano i download.</li>
+<li>Un giorno saltato compare come <i>saltato (eccezione)</i> nell'attività recente, con l'etichetta <i>Oggi saltato</i> sul task; non è un fallimento: nessun avviso, nessun errore nelle statistiche né nel report riepilogativo. Il nome del file usa sempre la data vera. Le esecuzioni manuali e le pianificazioni «una tantum» non cambiano; quelle «ogni N minuti» si fermano nei giorni saltati e non vengono spostate da <i>Tratta come</i>.</li>
+</ul>
 <div class="note">Le pianificazioni non recuperano gli orari passati: se l'app è spenta all'ora prevista, quel download non viene eseguito. Attiva <b>«Avvisa all'avvio se sono state saltate pianificazioni»</b> (Impostazioni → Affidabilità) per essere avvisato.</div>
 """, True),
 ("Destinazione e nome del file", """
@@ -208,16 +219,17 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 """, False),
 ("Notifiche: email e Telegram", """
 <p>Per i download che falliscono dopo tutti i tentativi (e per gli avvisi di «fonte ferma» o di pianificazioni saltate) l'app può inviare messaggi. Si configurano in <b>Impostazioni</b>; per ogni task l'invio si attiva o disattiva con «Avvisa via email/Telegram se il download fallisce…».</p>
+<p>Impostazioni → <b>Avvisi</b>. Ogni messaggio inizia con <code>[G-Downloader · nome dell'installazione]</code> (il nome si imposta in Impostazioni → Generali; se è vuoto si usa il nome del computer): con più PC in studio si capisce quale scrive. Ogni canale viene provato tre volte (subito, dopo 10 secondi, dopo 60 secondi) e un canale che non funziona non ferma l'altro. Le password e il token Telegram non compaiono mai nei messaggi né nei log.</p>
 <h3>12.1 Email</h3>
-<p>Attiva «Abilita notifiche email» e compila server SMTP, porta, connessione sicura (SSL/TLS), utente, password, mittente e destinatari (separati da virgola). Il pulsante <b>Invia email di prova</b> verifica la configurazione.</p>
+<p>Attiva «Abilita avvisi email» e compila server SMTP, porta, utente, password, mittente e destinatari (un solo campo, separati da virgole, spazi o a capo; al massimo 20). <b>Parte un solo messaggio per tutti, con i destinatari in Bcc</b>: nessuno vede gli indirizzi degli altri. Con un utente la connessione deve essere cifrata: <i>SSL/TLS fin dall'inizio</i> (di solito porta 465) oppure STARTTLS (di solito porta 587): la password non viaggia mai in chiaro. Il pulsante con l'occhio mostra o nasconde la password. <b>Invia email di prova</b> verifica la configurazione.</p>
 <h3>12.2 Telegram</h3>
 <ol><li>Su Telegram apri <b>@BotFather</b>, scrivi <code>/newbot</code> e scegli un nome e un username che termini con «bot».</li>
 <li>BotFather risponde con il <b>token</b> (tipo <code>123456789:AAF…</code>): copialo in «Bot Token». Il token è come una password: non pubblicarlo. Se finisce in mani sbagliate, <code>/revoke</code> in BotFather ne crea uno nuovo.</li>
 <li>Per ogni destinatario serve il <b>Chat ID</b>. <b>Persona:</b> apre il bot e preme <i>Avvia</i> (<code>/start</code>), poi scrive a <b>@userinfobot</b>, che risponde con il suo Id (un numero). <b>Gruppo o canale:</b> aggiungi il bot (per un canale, come amministratore), scrivi un messaggio; il Chat ID inizia con <code>-</code> (es. <code>-1001234567890</code>) e va inserito con il segno meno.</li>
-<li>In «Destinatari» aggiungi una riga per ciascuno, con una nota per ricordare chi è. <b>Invia messaggio di prova</b> controlla che arrivi a tutti.</li></ol>
+<li>In «Destinatari» aggiungi una riga per ciascuno, con una nota per ricordare chi è. <b>Invia messaggio di prova</b> controlla che arrivi a tutti; se qualcuno non lo riceve, l'errore li elenca uno per uno. Il campo del token ha lo stesso occhio delle password per mostrarlo o nasconderlo.</li></ol>
 <p>Se il bot è già usato da altri programmi (per esempio Home Assistant) puoi usarlo lo stesso: G-Downloader si limita a inviare messaggi e non disturba gli altri.</p>
 <h3>12.3 Report riepilogativo</h3>
-<p>In <i>Impostazioni → Report e log</i> puoi ricevere via email un riepilogo <b>giornaliero</b> (ultime 24 ore) o <b>settimanale</b> (il lunedì), all'ora scelta, con i download completati/falliti e il dettaglio degli errori. Usa la configurazione email.</p>
+<p>In <i>Impostazioni → Avvisi → Report e log</i> puoi ricevere via email un riepilogo <b>giornaliero</b> (ultime 24 ore) o <b>settimanale</b> (il lunedì), all'ora scelta, con i download completati/falliti e il dettaglio degli errori. Usa la configurazione email. I giorni saltati per un'eccezione di calendario non contano come falliti.</p>
 """, False),
 ("Affidabilità e controlli", """
 <p>In <i>Impostazioni → Affidabilità</i> e <i>Prestazioni e controlli</i>:</p>
@@ -228,24 +240,38 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <li><b>Pianificazioni saltate:</b> all'avvio segnala gli orari mancati perché l'app era spenta.</li>
 <li><b>Download contemporanei:</b> limite massimo (0 = nessun limite, 1 = uno alla volta); i download in eccesso attendono.</li>
 </ul>
+<h3>13.1 Attesa di un file pubblicato in ritardo</h3>
+<p>Se la fonte mette il file online in ritardo, attiva <b>Attesa del file</b> nella scheda <i>Sorgente</i> del task. Il task riprova allora ogni N minuti (predefinito 1) per al massimo M minuti (predefinito 20) dal momento in cui parte, invece di fallire al primo errore. Esempio: un task pianificato alle 19:55, che riprova ogni minuto per 20 minuti, copre la finestra dalle 19:55 alle 20:15.</p>
+<ul>
+<li>A ogni tentativo il file viene controllato: un file <b>vuoto o troppo piccolo</b> (il minimo si imposta nel task; se è 0 vale quello di Impostazioni → Affidabilità) e una <b>pagina web al posto del file</b> (una pagina d'errore salvata con il nome del file) contano come «non ancora arrivato».</li>
+<li>Per un <b>file locale o di rete</b> l'app aspetta anche che la sua dimensione smetta di cambiare (predefinito 5 secondi tra due letture), così non copia un file ancora in scrittura.</li>
+<li>Un utente o una password sbagliati (HTTP 401, FTP 530) fermano subito l'attesa: aspettare non servirebbe.</li>
+<li>Finita la finestra il task fallisce con l'ultimo errore, il numero di tentativi e i minuti attesi, e parte l'avviso solito.</li>
+<li>Mentre aspetta il task risulta in esecuzione: la pianificazione successiva dello stesso task viene saltata (con un avviso nella console), con «Download contemporanei» limitati occupa un posto, e <i>Chiudi e installa</i> viene rifiutato finché l'attesa non è finita.</li>
+</ul>
 """, False),
 ("Impostazioni", """
 <table><tr><th>Sezione</th><th>Contenuto</th></tr>
-<tr><td>Generali</td><td>tema chiaro/scuro · lingua · icona nella barra dei menu (bianca o blu) · formato di data e ora · avvio all'accensione del computer · avvio ridotto a icona · notifiche di successo e di errore · apertura della cartella cliccando la notifica · cartella di destinazione predefinita · tentativi e attesa predefiniti</td></tr>
-<tr><td>Affidabilità / Prestazioni</td><td>vedi capitolo 13</td></tr>
-<tr><td>Aggiornamenti</td><td>vedi capitolo 16 (compreso l'avviso via email/Telegram)</td></tr>
-<tr><td>Report e log</td><td>report email · apertura della cartella dei log</td></tr>
-<tr><td>Categorie e colori</td><td>colori delle categorie</td></tr>
-<tr><td>Email / Telegram</td><td>vedi capitolo 12</td></tr>
-<tr><td>Backup</td><td>vedi capitolo 15</td></tr></table>
+<p>Le schede sono, in quest'ordine, le stesse in tutte le app OnAir Garage:</p>
+<table><tr><th>Scheda</th><th>Contenuto</th></tr>
+<tr><td>Generali</td><td>tema chiaro/scuro · lingua · formato di data e ora · <b>nome di questa installazione</b> (compare negli avvisi) · <b>uso non presidiato</b>: avvio all'accensione del computer, avvio ridotto a icona, <b>computer sempre sveglio</b>, icona nella barra dei menu · notifiche di successo e di errore · apertura della cartella cliccando la notifica · cartella di destinazione predefinita · tentativi e attesa predefiniti</td></tr>
+<tr><td>Affidabilità</td><td>vedi capitolo 13 (controlli, prestazioni, attesa del file)</td></tr>
+<tr><td>Avvisi</td><td>vedi capitolo 12: report email, email e Telegram</td></tr>
+<tr><td>Categorie</td><td>colori, <b>rinomina</b> (se il nome esiste le due categorie si uniscono e tengono il colore di quella esistente) ed <b>elimina</b> (chiede dove spostare i task; i task non vengono mai eliminati)</td></tr>
+<tr><td>Aggiornamenti</td><td>vedi capitolo 16</td></tr>
+<tr><td>Backup</td><td>vedi capitolo 15</td></tr>
+<tr><td>Aiuto e informazioni</td><td>apre la pagina <i>Aiuto e informazioni</i>: versione, licenza, collegamenti, privacy, <b>Copia info per assistenza</b> (versione, sistema, lingua, nome dell'installazione, ultimo controllo aggiornamenti e ultimo errore: mai impostazioni, indirizzi, password o nomi di file), <b>Apri cartella log</b> e la guida</td></tr></table>
+<p>Chiudendo la finestra l'app resta nella barra di sistema (un avviso solo la prima volta); avviando l'app una seconda volta si vede la finestra già aperta; dimensione e posizione della finestra vengono ricordate.</p>
 <h3>Formato di data e ora</h3>
 <p>Il formato numerico (ordine giorno/mese, 24 ore o AM/PM) si sceglie a parte dalla lingua: Automatico, oppure 24 ore GG/MM/AAAA, AM/PM MM/GG/AAAA, 24 ore ISO AAAA-MM-GG, ecc. I <b>nomi</b> dei giorni e dei mesi seguono invece la lingua dell'interfaccia. I campi orario dell'editor delle pianificazioni cambiano formato dopo il riavvio dell'app.</p>
 """, True),
 ("Backup, trasferimento e aggiornamento", """
 <h3>15.1 Esportare e importare</h3>
-<ul><li><b>Backup / Trasferimento:</b> <i>Impostazioni → Esporta configurazione</i> salva task e impostazioni in un file; <i>Importa configurazione</i> li riporta identici su un altro computer.</li>
-<li><b>Singolo task:</b> <i>⤓ Esporta task</i> (nell'editor) e <i>⤒ Importa</i> (barra laterale) condividono o duplicano un solo task.</li></ul>
-<div class="warn">Il file di configurazione contiene anche le password SMTP e i token Telegram salvati: conservalo in un posto sicuro.</div>
+<ul><li><b>Backup / Trasferimento:</b> <i>Impostazioni → Backup → Esporta</i> salva task, impostazioni, categorie e colori in un file chiamato <code>g-downloader-backup-AAAA-MM-GG.json</code>; <i>Importa</i> li riporta su un altro computer. La cronologia dei download, i log e ciò che gli avvisi hanno già detto non sono mai nel file.</li>
+<li><b>Includi password e token</b> è <b>spento</b> di default. Spento: il file non contiene password, token, credenziali scritte in un indirizzo (<code>ftp://utente:password@host</code>) né intestazioni con una chiave; dopo l'importazione l'app <b>elenca ciò che va riscritto</b>. Acceso: un avviso rosso dice che il file conterrà tutto questo in chiaro, e il file è leggibile solo dal suo proprietario. Una password salvata con la protezione del sistema comunque non si aprirebbe su un altro PC, perciò con la casella accesa viene scritta in chiaro.</li>
+<li><b>Importa</b> chiede <i>Sostituisci tutto</i> (impostazioni e task diventano quelli del file; i task già presenti mantengono la loro cronologia) oppure <i>Aggiungi solo i task mancanti</i> (i task che questo PC non ha vengono aggiunti, spenti; impostazioni e task esistenti restano come sono). Una password che il file non contiene resta quella di questo PC, solo per lo stesso server e utente. L'app controlla che il file sia un backup di G-Downloader e, se dopo un download esegue programmi, <b>li mostra e chiede</b> prima di importare: importa solo file di cui ti fidi.</li>
+<li><b>Singolo task:</b> <i>⤓ Esporta task</i> (nell'editor) e <i>⤒ Importa</i> (barra laterale) condividono o duplicano un solo task: il file non contiene password, il task importato parte spento e l'app elenca ciò che va riscritto.</li></ul>
+<div class="warn">Se spunti «Includi password e token», conserva il file in un posto sicuro e non condividerlo.</div>
 <h3>15.2 Aggiornare da una versione precedente</h3>
 <ol><li>Esporta la configurazione dalla versione attuale (per sicurezza).</li>
 <li><b>Chiudi la versione attuale con «Esci»</b> dal menu dell'icona nella barra di sistema; se resta attiva, con la nuova aperta i download partirebbero due volte.</li>
@@ -255,32 +281,36 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <div class="note">Il cambio di identificativo dell'app (<code>com.onairgarage.gdownloader</code>) può far sì che su Windows l'installer non sostituisca la vecchia installazione ma si affianchi a essa: in quel caso disinstalla la vecchia dopo aver verificato la nuova.</div>
 """, False),
 ("Aggiornamenti", """
-<p>G-Downloader controlla periodicamente su GitHub se esiste una versione più recente (15 secondi dopo l'avvio, poi ogni 24 ore) e mostra un avviso nella barra in alto; lo stesso avviso è raggiungibile in <i>Impostazioni → Aggiornamenti</i>, dove è disponibile anche il pulsante <b>Controlla aggiornamenti</b> per un controllo manuale.</p>
+<p>G-Downloader controlla periodicamente su GitHub se esiste una versione più recente (15 secondi dopo l'avvio, poi ogni 24 ore) e mostra un avviso nella barra in alto con le prime righe delle note di rilascio; lo stesso avviso è raggiungibile in <i>Impostazioni → Aggiornamenti</i>, dove compaiono anche data ed esito dell'<b>ultimo controllo</b> e il pulsante <b>Controlla ora</b>. L'avviso ha quattro pulsanti: <b>Scarica e installa</b>, <b>Ricordamelo dopo</b> (lo nasconde per 24 ore), <b>Salta questa versione</b> (lo nasconde fino alla prossima) e <b>Note di rilascio</b> (la pagina della release).</p>
 <h3>16.1 Scaricare e verificare</h3>
-<p>Cliccando <b>Scarica e installa</b> l'app individua da sola l'installer giusto per il tuo sistema e il tuo processore (Intel o Apple Silicon su Mac) e lo scarica nella cartella <b>Download</b>, mostrando percentuale e megabyte scaricati. Al termine confronta il file con lo <b>SHA-256</b> pubblicato nella release (<code>SHA256SUMS.txt</code>): se non corrisponde, il file viene <b>eliminato</b> e compare un messaggio d'errore chiaro, con il pulsante <i>Apri pagina di download</i> come ripiego.</p>
+<p>Cliccando <b>Scarica e installa</b> l'app individua da sola l'installer giusto per il tuo sistema e il tuo processore (Intel o Apple Silicon su Mac) e lo scarica nella cartella <b>Download</b>, mostrando una barra di avanzamento con percentuale e megabyte scaricati e un pulsante <b>Annulla</b>. Un download annullato, interrotto o fermo non lascia file a metà. Al termine confronta il file con lo <b>SHA-256</b> pubblicato nella release (<code>SHA256SUMS.txt</code>): se non corrisponde, il file viene <b>eliminato</b> e compare un messaggio d'errore chiaro, con il pulsante <i>Apri pagina di download</i> come ripiego.</p>
 <p>Lo stato del download (disponibile, in corso, pronto, errore) è <b>lo stesso</b> sia nella barra sia in Impostazioni: puoi avviarlo da un punto e seguirlo dall'altro. Mentre un download è in corso il pulsante <i>Controlla aggiornamenti</i> resta disattivato.</p>
 <h3>16.2 Avviso anche via email e Telegram</h3>
-<p>Per le macchine lasciate da sole in sala server, quando un controllo automatico trova una versione nuova l'app manda <b>un solo messaggio per versione</b> sui canali già configurati per gli errori (email e/o Telegram), con il numero della versione e il link alla release. Funziona solo se almeno uno dei due canali è attivo; si disattiva in <i>Impostazioni → Aggiornamenti</i> («Avvisami anche via email/Telegram…»). Il controllo manuale non invia messaggi.</p>
+<p>Per le macchine lasciate da sole in sala server, quando un controllo automatico trova una versione nuova l'app avvisa <b>una sola volta per versione e per canale</b> (notifica sul desktop, Telegram, email), con il numero della versione e il link alla release. Telegram ed email solo se configurati; si disattiva in <i>Impostazioni → Aggiornamenti</i> («Avvisami anche via email/Telegram…»). Un canale conta come avvisato solo dopo che il messaggio è stato consegnato: un invio fallito viene ritentato al controllo successivo, e ciò che è già stato detto si ricorda anche dopo un riavvio (file <code>alert-state.json</code>). Il controllo manuale non invia messaggi.</p>
 <h3>16.3 Completare l'installazione</h3>
 <p>A verifica riuscita compare un pulsante verde, diverso per sistema:</p>
 <table><tr><th>Sistema</th><th>Pulsante</th><th>Che cosa succede</th></tr>
 <tr><td>Windows</td><td>Chiudi e installa</td><td>l'app chiude sé stessa (i download pianificati si fermano) e avvia l'installer; al termine si riapre da sola.</td></tr>
 <tr><td>macOS</td><td>Apri installer</td><td>apre il file <code>.dmg</code> scaricato. Chiudi G-Downloader con «Esci» dall'icona nella barra dei menu e trascina la nuova versione in Applicazioni, come al primo avvio.</td></tr>
 <tr><td>Linux</td><td>Apri installer</td><td>mostra il file <code>.AppImage</code> scaricato nella sua cartella. Chiudi G-Downloader con «Esci» e avvia il nuovo file.</td></tr></table>
-<div class="note">L'installazione non parte mai da sola: il pulsante verde va sempre premuto di proposito. Su macOS e Linux l'app non può sostituirsi da sola: serve comunque il passaggio manuale descritto sopra, come per una prima installazione.</div>
+<p><b>Prima di installare</b> l'app fa una copia di sicurezza del proprio file dei dati nella cartella <code>backups</code> (<code>pre-update-&lt;versione&gt;.json</code>, le ultime 3 restano): non è un'esportazione ed è pensata solo per questo PC. Se ci sono download in corso, il pulsante viene rifiutato con il motivo: chiudere ora li interromperebbe; riprova quando sono finiti.</p>
+<h3>16.4 Dopo l'aggiornamento</h3>
+<p>Al primo avvio della nuova versione l'app mostra <i>Aggiornato a G-Downloader X</i> e una finestra <b>Novità</b> con i punti di quella versione, una sola volta.</p>
+<div class="note">L'installazione non parte mai da sola: il pulsante verde va sempre premuto di proposito. Su macOS e Linux l'app non può sostituirsi da sola: serve comunque il passaggio manuale descritto sopra, come per una prima installazione. Su Windows l'installer riavvia la nuova versione alla fine; è scritto nell'installer ma non è ancora stato verificato su un PC Windows reale.</div>
 """, False),
 ("Log e cronologia", """
 <ul><li><b>Console:</b> in tempo reale, in fondo alla finestra (si svuota al riavvio).</li>
 <li><b>Cronologia dei task:</b> gli ultimi 50 tentativi di ciascun task, visibili nelle schede e nella dashboard.</li>
 <li><b>Statistiche giornaliere:</b> contatori permanenti (circa 13 mesi) per i grafici.</li>
-<li><b>Log su file:</b> un file al giorno, conservato 30 giorni, nella cartella <code>logs</code> dei dati dell'app (pulsante <i>Apri cartella log</i> nelle Impostazioni). Ogni riga riporta data, livello, task e messaggio.</li></ul>
+<li><b>Log su file:</b> un file al giorno, al massimo 5 MB ciascuno (un file pieno viene chiuso e ne comincia un altro), gli ultimi 7 giorni, nella cartella <code>logs</code> dei dati dell'app (pulsante <i>Apri cartella log</i> in Aiuto e informazioni). Ogni riga riporta data, livello, task e messaggio; le credenziali scritte negli indirizzi sono nascoste.</li>
+<li><b>Giorni saltati:</b> un giorno saltato da un'eccezione di calendario compare una volta per task nella cronologia come <i>saltato</i>; non cambia l'ultimo esito e non conta nelle statistiche.</li></ul>
 """, False),
 ("Dove sono i dati", """
 <table><tr><th>Sistema</th><th>Cartella</th></tr>
 <tr><td>Windows</td><td><code>%APPDATA%\\g-downloader</code></td></tr>
 <tr><td>macOS</td><td><code>~/Library/Application Support/g-downloader</code></td></tr>
 <tr><td>Linux</td><td><code>~/.config/g-downloader</code></td></tr></table>
-<p>Vi si trovano il file dei task e delle impostazioni e la cartella <code>logs</code>. Le password e i token sono salvati cifrati con il sistema di protezione del computer e utente: non si leggono se copi i dati su un altro PC (in quel caso vanno reinseriti).</p>
+<p>Vi si trovano il file dei task e delle impostazioni, <code>alert-state.json</code> (ciò che gli avvisi hanno già detto), la cartella <code>backups</code> (copie di sicurezza fatte prima di un aggiornamento) e la cartella <code>logs</code>. Le password, i token e le credenziali scritte negli indirizzi sono salvati cifrati con il sistema di protezione del computer e utente: non si leggono se copi i dati su un altro PC (in quel caso vanno reinseriti; per questo esiste, nel Backup, la casella «Includi password e token»).</p>
 """, False),
 ("Risoluzione dei problemi", """
 <table><tr><th>Problema</th><th>Cosa fare</th></tr>
@@ -290,7 +320,8 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <tr><td>Il download non parte all'ora prevista</td><td>Controlla che l'app sia in esecuzione (icona nella barra di sistema), che il task e la pianificazione siano attivi e guarda <i>Anteprima</i> e la console. Attiva l'avviso sulle pianificazioni saltate.</td></tr>
 <tr><td>Errore 401/403 dal server</td><td>Controlla utente e password nella scheda Sorgente.</td></tr>
 <tr><td>FTP: «550 file non trovato»</td><td>Leggi il messaggio: indica la cartella di accesso e i file presenti; correggi il percorso o attendi che il file sia pubblicato. Ricorda la doppia barra per i percorsi assoluti.</td></tr>
-<tr><td>Il file scaricato è una pagina di errore</td><td>Attiva «Verifica che il file non sia troppo piccolo» e imposta la dimensione minima.</td></tr>
+<tr><td>Il file scaricato è una pagina di errore, o il file è pubblicato in ritardo</td><td>Attiva «Attesa del file» nel task (capitolo 13.1): file vuoti, troppo piccoli e pagine web vengono ritentati finché la finestra non finisce. Oppure attiva «Verifica che il file non sia troppo piccolo» nelle Impostazioni.</td></tr>
+<tr><td>Un download non è partito in un giorno festivo</td><td>Guarda le <i>Eccezioni di calendario</i> del task (capitolo 8.6) e la nota <i>saltato (eccezione)</i> nell'attività recente.</td></tr>
 <tr><td>Le password sono sparite dopo il trasferimento</td><td>Sono legate all'utente e al computer: reinseriscile.</td></tr>
 <tr><td>Non arrivano email/Telegram</td><td>Usa i pulsanti di prova nelle Impostazioni e controlla il messaggio d'errore.</td></tr>
 <tr><td>Download doppi</td><td>Probabilmente sono aperte due copie dell'app (vecchia e nuova): chiudi quella che non serve con «Esci».</td></tr>

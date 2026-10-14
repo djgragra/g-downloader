@@ -1,6 +1,7 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, dialog, nativeImage, nativeTheme, Notification, shell } from 'electron';
+import { app, BrowserWindow, Tray, Menu, ipcMain, dialog, nativeImage, nativeTheme, Notification, shell, clipboard, powerSaveBlocker } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
@@ -13,18 +14,34 @@ import {
   updateSettings,
   getWindowBounds,
   setWindowBounds,
-  exportConfig,
-  importConfig,
-  exportTask,
-  importTask,
+  getConfig,
+  applyConfig,
+  applyCategoryChange,
+  addTasks,
+  exportTaskData,
   getDailyStats,
-  migrateSecrets
+  migrateSecrets,
+  unreadableSecrets,
+  takeLegacyNotifiedVersion,
+  getUpdateState,
+  setUpdateState,
+  getLastSeenVersion,
+  setLastSeenVersion,
+  getCloseHintShown,
+  setCloseHintShown,
+  hadSettingsFile,
+  settingsFile
 } from './src/store.js';
 import { startScheduler, lastScheduledOccurrence, recentOccurrences, nextRunForTask, computeQueue, findMissedOccurrences, upcomingOccurrencesForSchedule } from './src/scheduler.js';
 import { runTaskNow, runningTaskCount, actionsFileInfo, previewTaskActions, previewCleanup, events as downloadEvents } from './src/downloader.js';
-import { testEmail, testTelegram, notifyAlert } from './src/notifications.js';
-import { checkForUpdate, downloadInstaller } from './src/updater.js';
-import { appendFileLog, pruneOldLogs, getLogDir } from './src/filelog.js';
+import { notifier, getAlertState } from './src/services.js';
+import { checkForUpdate, downloadInstaller, sweepPartials, bannerState, remindLaterState, skipVersionState, makeSafetyCopy, installPlan, whatsNew, startupKind } from './src/updater.js';
+import { buildExport, backupFileName, prepareImport, buildTaskExport, prepareTaskImport } from './src/backup.js';
+import { renameCategory, deleteCategory } from './src/categories.js';
+import { addExceptionToTasks, normalizeExceptions } from './src/exceptions.js';
+import { buildSupportInfo } from './src/support.js';
+import { httpFetch } from './src/httpfetch.js';
+import { appendFileLog, pruneOldLogs, getLogDir, getLastError } from './src/filelog.js';
 import { M } from './src/i18n.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -105,16 +122,20 @@ function createWindow() {
     if (!isQuitting) {
       e.preventDefault();
       mainWindow.hide();
-      dialog
-        .showMessageBox({
-          type: 'info',
-          title: 'G-Downloader',
-          message: M("Il programma è ancora in esecuzione nella system tray."),
-          detail: M("L'icona appare nell'area notifiche in basso a destra.\n\n• Doppio click sull'icona → riapri finestra\n• Tasto destro sull'icona → Esci → chiudi completamente"),
-          buttons: ['OK'],
-          icon: trayIcon(getSettings().trayIconStyle)
-        })
-        .catch(() => {});
+      // said once: the window closes into the tray (apps/COMMON-FEATURES.md 5.5)
+      if (!getCloseHintShown()) {
+        setCloseHintShown();
+        dialog
+          .showMessageBox({
+            type: 'info',
+            title: 'G-Downloader',
+            message: M("Il programma è ancora in esecuzione nella system tray."),
+            detail: M("L'icona appare nell'area notifiche in basso a destra.\n\n• Doppio click sull'icona → riapri finestra\n• Tasto destro sull'icona → Esci → chiudi completamente\n\nQuesto avviso compare una sola volta."),
+            buttons: ['OK'],
+            icon: trayIcon(getSettings().trayIconStyle)
+          })
+          .catch(() => {});
+      }
     } else {
       setWindowBounds(mainWindow.getBounds());
     }
@@ -255,6 +276,15 @@ function createTray() {
   tray.on('click', () => mainWindow.show());
 }
 
+let awakeId = null;
+function applyKeepAwake(on) {
+  if (on && awakeId === null) awakeId = powerSaveBlocker.start('prevent-app-suspension');
+  else if (!on && awakeId !== null) {
+    powerSaveBlocker.stop(awakeId);
+    awakeId = null;
+  }
+}
+
 app.on('second-instance', () => {
   if (mainWindow) {
     mainWindow.show();
@@ -271,8 +301,15 @@ app.whenReady().then(() => {
 
   migrateSecrets();
   pruneOldLogs();
-  scheduleUpdateChecks();
   downloadEvents.on('log', appendFileLog);
+  for (const id of unreadableSecrets()) {
+    appendFileLog({ taskId: 'SISTEMA', level: 'warn', message: M('Una password salvata non si può aprire su questo PC o con questo utente: va riscritta ({id}).', { id }) });
+  }
+  applyKeepAwake(getSettings().keepAwake);
+  sweepPartials(app.getPath('downloads')); // installers left half-downloaded by a closed app
+  adoptLegacyUpdateMemory();
+  prepareStartupNotice();
+  scheduleUpdateChecks();
 
   // Snapshot missed occurrences BEFORE the first scheduler tick runs its catch-up
   // fire and bumps lastFired — otherwise there'd be nothing left to detect as missed.
@@ -387,76 +424,120 @@ ipcMain.handle('stats:daily', () => getDailyStats());
 ipcMain.handle('queue:list', (_e, limit) => computeQueue(getTasks(), limit || 20));
 
 // ---- IPC: notifications ----
-ipcMain.handle('notifications:test-email', async (_e, emailCfg) => {
-  try {
-    await testEmail(emailCfg);
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err.message };
-  }
-});
-
-ipcMain.handle('notifications:test-telegram', async (_e, tgCfg) => {
-  try {
-    await testTelegram(tgCfg);
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err.message };
-  }
-});
+ipcMain.handle('notifications:test-email', (_e, emailCfg) => notifier.testEmail(emailCfg));
+ipcMain.handle('notifications:test-telegram', (_e, tgCfg) => notifier.testTelegram(tgCfg));
 
 // ---- IPC: settings ----
 ipcMain.handle('settings:get', () => getSettings());
 ipcMain.handle('settings:update', (_e, patch) => {
   const next = updateSettings(patch);
   app.setLoginItemSettings({ openAtLogin: !!next.startOnBoot, openAsHidden: true });
+  if ('keepAwake' in patch) applyKeepAwake(next.keepAwake);
   if ('trayIconStyle' in patch && tray) tray.setImage(trayIcon(next.trayIconStyle));
   return next;
 });
 
-// ---- updates ----
-// The check shows a notice; on request the installer is downloaded to the Downloads folder and
-// verified (SHA-256). It only runs when the user presses "Close and install" / "Open installer".
+// ---- updates (apps/COMMON-FEATURES.md, section 4) ----
+// The check shows a banner; on request the installer is downloaded to the Downloads folder and verified (SHA-256).
+// Nothing installs by itself: it runs only when the user presses "Close and install" / "Open installer".
 let lastUpdateInfo = null;
+let downloadedInstaller = null; // { version, file } once downloaded and verified
+let installerDownload = null; // promise of the download in progress, shared by concurrent requests
+let downloadAbort = null;
+let startupNotice = null; // { version, previous, whatsNew } for the first start after an update
+
+const send = (channel, data) => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, data);
+};
+
+const updateView = (info) => ({ ...info, banner: bannerState(info, getUpdateState()), state: getUpdateState() });
+
 async function runUpdateCheck(manual) {
-  const info = await checkForUpdate(getSettings().updateRepo);
+  const settings = getSettings();
+  const info = await checkForUpdate({ repo: settings.updateRepo, current: app.getVersion(), fetchFn: httpFetch });
+  setUpdateState({ lastCheck: { at: Date.now(), ok: !!info.ok, error: info.ok ? '' : String(info.error || '').slice(0, 200) } });
   if (info.ok) lastUpdateInfo = info;
-  if (!manual && info.available && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('event:update-available', info);
-  }
-  if (!manual && info.available) await notifyNewVersion(info);
-  return info;
+  if (manual && info.ok && info.available) setUpdateState({ remindUntil: 0, skipVersion: '' }); // asked on purpose: show it
+  const view = updateView(info);
+  if (!manual && view.banner === 'show') send('event:update-available', view);
+  if (info.ok && info.available) await announceNewVersion(info);
+  return view;
 }
 
-// A machine nobody looks at still gets to know: ONE message per new version through the
-// channels already used for failures (email / Telegram), if at least one is switched on.
-async function notifyNewVersion(info) {
-  const settings = getSettings();
-  const n = settings.notifications || {};
-  if (settings.notifyNewVersion === false || settings.lastNotifiedVersion === info.latest) return;
-  if (!n.email?.enabled && !n.telegram?.enabled) return;
-  const text = M("È disponibile la nuova versione {latest} di G-Downloader (installata: {current}).\nApri l'app: in alto trovi l'avviso con \"Scarica e installa\".\n{url}", { latest: info.latest, current: info.current, url: info.url });
-  updateSettings({ lastNotifiedVersion: info.latest });
-  await notifyAlert(settings, M("[G-Downloader] Nuova versione {latest} disponibile", { latest: info.latest }), text, (msg, level) =>
-    appendFileLog({ taskId: 'SISTEMA', level: level || 'info', message: msg })
-  );
+// A machine nobody looks at still gets to know: the new version is announced ONCE per channel (desktop, Telegram, email),
+// the channel being marked only after the message was delivered (src/notify.js, alert-state.json).
+async function announceNewVersion(info) {
+  const state = getAlertState();
+  const s = getSettings();
+  if (s.updateAlert !== false && s.notifications?.desktop !== false && Notification.isSupported() && !state.isTold(info.latest, 'desktop')) {
+    new Notification({ title: 'G-Downloader', body: M('Nuova versione {latest} disponibile (installata: {current}).', { latest: info.latest, current: info.current }) }).show();
+    state.markTold(info.latest, 'desktop');
+  }
+  await notifier.updateNotice(info);
 }
+
+// 26.10.1 remembered the last announced version in the settings; it moved to alert-state.json.
+function adoptLegacyUpdateMemory() {
+  const v = takeLegacyNotifiedVersion();
+  if (!v) return;
+  for (const c of ['desktop', 'telegram', 'email']) getAlertState().markTold(v, c);
+}
+
 function scheduleUpdateChecks() {
   setTimeout(() => getSettings().checkUpdates && runUpdateCheck(false), 15_000);
   setInterval(() => getSettings().checkUpdates && runUpdateCheck(false), 24 * 3600 * 1000);
 }
-ipcMain.handle('update:check', () => runUpdateCheck(true));
 
-let downloadedInstaller = null; // { version, file } once downloaded and verified
-let installerDownload = null; // promise of the download in progress, shared by concurrent requests
+function readChangelog() {
+  try {
+    return fs.readFileSync(path.join(__dirname, 'CHANGELOG.md'), 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+// First start after an update: "Updated to X" and the What's new window (once, until the user closes it).
+function prepareStartupNotice() {
+  const current = app.getVersion();
+  const kind = startupKind(getLastSeenVersion(), current, hadSettingsFile);
+  if (kind === 'first') setLastSeenVersion(current);
+  else if (kind === 'updated') startupNotice = { version: current, previous: getLastSeenVersion(), whatsNew: whatsNew(readChangelog(), current) };
+}
+
+ipcMain.handle('update:check', () => runUpdateCheck(true));
+ipcMain.handle('update:state', () => ({ last: lastUpdateInfo ? updateView(lastUpdateInfo) : null, state: getUpdateState(), ready: downloadedInstaller && fs.existsSync(downloadedInstaller.file) ? { version: downloadedInstaller.version } : null }));
+ipcMain.handle('update:remind-later', () => {
+  setUpdateState(remindLaterState(getUpdateState()));
+  return { ok: true };
+});
+ipcMain.handle('update:skip', (_e, version) => {
+  setUpdateState(skipVersionState(getUpdateState(), version || lastUpdateInfo?.latest));
+  return { ok: true };
+});
+ipcMain.handle('update:startup', () => startupNotice);
+ipcMain.handle('update:startup-ack', () => {
+  setLastSeenVersion(app.getVersion());
+  startupNotice = null;
+  return true;
+});
+
 ipcMain.handle('update:download', async () => {
   const info = lastUpdateInfo;
   if (!info?.available) return { ok: false, error: 'no-update' };
   if (downloadedInstaller?.version === info.latest && fs.existsSync(downloadedInstaller.file)) {
     return { ok: true, file: downloadedInstaller.file, version: info.latest };
   }
-  installerDownload ||= downloadInstaller(info, app.getPath('downloads'), (received, total) => {
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('event:update-progress', { received, total });
+  if (installerDownload) return installerDownload; // a second click joins the download in progress
+  const dir = app.getPath('downloads');
+  sweepPartials(dir); // only now: never while a download of this process is running
+  downloadAbort = new AbortController();
+  installerDownload = downloadInstaller({
+    info,
+    dir,
+    fetchFn: httpFetch,
+    current: app.getVersion(),
+    signal: downloadAbort.signal,
+    onProgress: (received, total) => send('event:update-progress', { received, total })
   })
     .then((file) => {
       downloadedInstaller = { version: info.latest, file };
@@ -464,48 +545,88 @@ ipcMain.handle('update:download', async () => {
       return { ok: true, file, version: info.latest };
     })
     .catch((err) => {
+      if (err.cancelled) return { ok: false, error: 'cancelled' };
       appendFileLog({ taskId: 'SISTEMA', level: 'error', message: M('Download dell\'aggiornamento non riuscito: {error}', { error: err.message }) });
       return { ok: false, error: err.message };
     })
     .finally(() => {
       installerDownload = null;
+      downloadAbort = null;
     });
   return installerDownload;
 });
+ipcMain.handle('update:cancel', () => {
+  downloadAbort?.abort();
+  return true;
+});
 
-// Windows: start the installer and quit, so it can replace the app (it restarts it when done).
+// Windows: start the installer and quit, so it can replace the app (the installer starts it again when done).
 // macOS / Linux: open the disk image / show the AppImage; the user completes the installation.
+// Refused while a download is running: closing the app would interrupt it.
 ipcMain.handle('update:install', () => {
   const d = downloadedInstaller;
   if (!d || !fs.existsSync(d.file)) return { ok: false, error: 'no-installer' };
-  if (process.platform === 'win32') {
-    if (runningTaskCount() > 0) return { ok: false, error: 'busy' };
-    spawn(d.file, [], { detached: true, stdio: 'ignore' }).unref();
+  const busy = runningTaskCount();
+  if (busy > 0) return { ok: false, error: 'busy', count: busy };
+  try {
+    makeSafetyCopy({ file: settingsFile(), dir: path.join(app.getPath('userData'), 'backups'), version: d.version });
+  } catch (err) {
+    appendFileLog({ taskId: 'SISTEMA', level: 'warn', message: M('Copia di sicurezza prima dell\'aggiornamento non riuscita: {error}', { error: err.message }) });
+  }
+  const plan = installPlan(process.platform, d.file);
+  if (plan.kind === 'run-installer') {
+    spawn(plan.file, [], { detached: true, stdio: 'ignore' }).unref();
     isQuitting = true;
     setTimeout(() => app.quit(), 500);
-  } else if (process.platform === 'darwin') {
-    shell.openPath(d.file);
+  } else if (plan.kind === 'open-image') {
+    shell.openPath(plan.file);
   } else {
-    shell.showItemInFolder(d.file);
+    shell.showItemInFolder(plan.file);
   }
-  return { ok: true };
+  return { ok: true, hint: plan.hint || '' };
 });
 
 // Only this repository's release pages, or the author's site.
 ipcMain.handle('update:open', (_e, url) => {
   const releases = `https://github.com/${getSettings().updateRepo}/releases/`;
   if (url === 'https://onairgarage.com') return shell.openExternal(url);
+  if (typeof url === 'string' && url.startsWith('https://onairgarage.com/tools/g-downloader')) return shell.openExternal(url);
+  if (url === 'mailto:hello@onairgarage.com') return shell.openExternal(url);
   return shell.openExternal(typeof url === 'string' && url.startsWith(releases) ? url : `${releases}latest`);
 });
 
-// ---- IPC: app info ----
+// ---- IPC: app info, support info (apps/COMMON-FEATURES.md 5.2) ----
 ipcMain.handle('app:info', () => ({
   name: 'G-Downloader',
   version: app.getVersion(),
   electron: process.versions.electron,
+  chrome: process.versions.chrome,
   node: process.versions.node,
-  platform: process.platform
+  platform: process.platform,
+  arch: process.arch,
+  installationName: getSettings().installationName || os.hostname()
 }));
+
+// What the owner may ask a user to paste into an email: never settings values, addresses, tokens or file names.
+ipcMain.handle('support:copy', () => {
+  const s = getSettings();
+  const text = buildSupportInfo({
+    app: 'G-Downloader',
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    platform: process.platform,
+    arch: process.arch,
+    osRelease: os.release(),
+    language: s.language,
+    installationName: s.installationName || os.hostname(),
+    lastCheck: getUpdateState().lastCheck,
+    lastError: getLastError(),
+    home: os.homedir()
+  });
+  clipboard.writeText(text);
+  return { ok: true, text };
+});
 
 // ---- IPC: pickers ----
 ipcMain.handle('dialog:pick-folder', async () => {
@@ -546,17 +667,9 @@ ipcMain.handle('system:open-log-folder', () => {
 
 // A shared/imported file can carry post-download actions that run programs. Show them and
 // ask before importing, so a file from someone else cannot silently plant a command.
-async function confirmImportedCommands(tasks) {
-  const cmds = [];
-  for (const t of tasks || []) {
-    for (const a of t.postActions || []) {
-      if (a.type !== 'run' || a.enabled === false) continue;
-      const text = a.mode === 'line' ? String(a.commandLine || '') : `${a.command || ''} ${(a.args || []).join(' ')}`;
-      for (const line of text.split(/\r?\n/)) if (line.trim()) cmds.push(`[${t.name}] ${line.trim()}`);
-    }
-  }
-  if (!cmds.length) return true;
-  const shown = cmds.slice(0, 8).join('\n') + (cmds.length > 8 ? M("\n… e altri {n}", { n: cmds.length - 8 }) : '');
+async function confirmImportedCommands(commands) {
+  if (!commands?.length) return true;
+  const shown = commands.slice(0, 8).map((c) => `[${c.task}] ${c.line}`).join('\n') + (commands.length > 8 ? M("\n… e altri {n}", { n: commands.length - 8 }) : '');
   const res = await dialog.showMessageBox(mainWindow, {
     type: 'warning',
     buttons: [M("Importa"), M("Annulla")],
@@ -569,23 +682,38 @@ async function confirmImportedCommands(tasks) {
   return res.response === 0;
 }
 
-// ---- IPC: config export/import (for moving to another PC) ----
-ipcMain.handle('config:export', async () => {
+const importErrorText = (code) =>
+  ({
+    invalid: M("File di configurazione non valido"),
+    'wrong-app': M("Questo file non è un backup di G-Downloader"),
+    'too-big': M("Il file è troppo grande"),
+    'no-tasks': M("Il file non contiene task")
+  })[code] || code;
+
+// ---- IPC: configuration backup (apps/COMMON-FEATURES.md, section 3) ----
+// Settings, tasks, categories and colours; never the history, the logs or what the alerts already said.
+ipcMain.handle('config:export', async (_e, opts = {}) => {
+  const includeSecrets = opts.includeSecrets === true;
   const res = await dialog.showSaveDialog(mainWindow, {
     title: M("Esporta configurazione"),
-    defaultPath: `g-downloader-config-${new Date().toISOString().slice(0, 10)}.json`,
+    defaultPath: backupFileName(),
     filters: [{ name: M("File di configurazione"), extensions: ['json'] }]
   });
   if (res.canceled || !res.filePath) return { ok: false, canceled: true };
   try {
-    fs.writeFileSync(res.filePath, JSON.stringify(exportConfig(), null, 2), 'utf-8');
-    return { ok: true, filePath: res.filePath };
+    const file = buildExport(getConfig(), { includeSecrets });
+    // with passwords inside the file is readable only by its owner
+    fs.writeFileSync(res.filePath, JSON.stringify(file, null, 2), { encoding: 'utf-8', mode: includeSecrets ? 0o600 : 0o644 });
+    if (includeSecrets) fs.chmodSync(res.filePath, 0o600);
+    return { ok: true, filePath: res.filePath, includesSecrets: includeSecrets };
   } catch (err) {
     return { ok: false, error: err.message };
   }
 });
 
-ipcMain.handle('config:import', async () => {
+// mode: 'replace' (settings and tasks from the file) | 'add' (only the tasks this PC does not have, switched off)
+ipcMain.handle('config:import', async (_e, opts = {}) => {
+  const mode = opts.mode === 'add' ? 'add' : 'replace';
   const res = await dialog.showOpenDialog(mainWindow, {
     title: M("Importa configurazione"),
     properties: ['openFile'],
@@ -593,19 +721,35 @@ ipcMain.handle('config:import', async () => {
   });
   if (res.canceled || !res.filePaths[0]) return { ok: false, canceled: true };
   try {
-    const raw = fs.readFileSync(res.filePaths[0], 'utf-8');
-    const parsed = JSON.parse(raw);
-    if (!(await confirmImportedCommands(parsed.tasks))) return { ok: false, canceled: true };
-    const next = importConfig(parsed);
+    const stat = fs.statSync(res.filePaths[0]);
+    if (stat.size > 25_000_000) return { ok: false, error: importErrorText('too-big') };
+    const plan = prepareImport(fs.readFileSync(res.filePaths[0], 'utf-8'), getConfig(), { mode });
+    if (!plan.ok) return { ok: false, error: importErrorText(plan.error) };
+    if (mode === 'replace') {
+      const sure = await dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        buttons: [M("Sostituisci tutto"), M("Annulla")],
+        defaultId: 1,
+        cancelId: 1,
+        title: M("Importa configurazione"),
+        message: M("Sostituire tutte le impostazioni e i task con quelli del file?"),
+        detail: M("I task e le impostazioni attuali saranno sostituiti ({n} task nel file).", { n: plan.tasks.length })
+      });
+      if (sure.response !== 0) return { ok: false, canceled: true };
+    }
+    if (!(await confirmImportedCommands(plan.commands))) return { ok: false, canceled: true };
+    const next = applyConfig({ settings: plan.settings, tasks: plan.tasks }, { replaceSettingsToo: mode === 'replace' });
     app.setLoginItemSettings({ openAtLogin: !!next.settings.startOnBoot, openAsHidden: true });
+    applyKeepAwake(next.settings.keepAwake);
     if (tray) tray.setImage(trayIcon(next.settings.trayIconStyle));
-    return { ok: true, settings: next.settings, tasksCount: next.tasks.length };
+    return { ok: true, mode, settings: next.settings, tasksCount: plan.tasks.length, added: plan.added, missing: plan.missing };
   } catch (err) {
     return { ok: false, error: err.message };
   }
 });
 
 // ---- IPC: single-task export/import (share/duplicate one task instead of the whole config) ----
+// The file of one task carries no password and no credentials written in an address.
 ipcMain.handle('task:export', async (_e, id) => {
   const task = getTask(id);
   if (!task) return { ok: false, error: M("Task non trovato") };
@@ -616,7 +760,7 @@ ipcMain.handle('task:export', async (_e, id) => {
   });
   if (res.canceled || !res.filePath) return { ok: false, canceled: true };
   try {
-    fs.writeFileSync(res.filePath, JSON.stringify(exportTask(id), null, 2), 'utf-8');
+    fs.writeFileSync(res.filePath, JSON.stringify(buildTaskExport(exportTaskData(id)), null, 2), 'utf-8');
     return { ok: true, filePath: res.filePath };
   } catch (err) {
     return { ok: false, error: err.message };
@@ -631,17 +775,41 @@ ipcMain.handle('task:import', async () => {
   });
   if (res.canceled || !res.filePaths[0]) return { ok: false, canceled: true };
   try {
-    const raw = fs.readFileSync(res.filePaths[0], 'utf-8');
-    const parsed = JSON.parse(raw);
-    if (!(await confirmImportedCommands(parsed.tasks || (parsed.task ? [parsed.task] : [parsed])))) return { ok: false, canceled: true };
-    const task = importTask(parsed);
-    return { ok: true, task, count: task._count || 1 };
+    const plan = prepareTaskImport(fs.readFileSync(res.filePaths[0], 'utf-8'));
+    if (!plan.ok) return { ok: false, error: importErrorText(plan.error) };
+    if (!(await confirmImportedCommands(plan.commands))) return { ok: false, canceled: true };
+    addTasks(plan.tasks);
+    return { ok: true, task: plan.tasks[0], count: plan.tasks.length, missing: plan.missing };
   } catch (err) {
     return { ok: false, error: err.message };
   }
 });
 
+// ---- IPC: categories (apps/COMMON-FEATURES.md, section 2) ----
+ipcMain.handle('categories:rename', (_e, from, to) => {
+  const cfg = getConfig();
+  const r = renameCategory(cfg.tasks, cfg.settings.categoryColors, from, to);
+  if (!r.ok) return r;
+  const next = applyCategoryChange(r);
+  return { ok: true, merged: r.merged, count: r.changed.length, settings: next.settings };
+});
+ipcMain.handle('categories:delete', (_e, name, moveTo) => {
+  const cfg = getConfig();
+  const r = deleteCategory(cfg.tasks, cfg.settings.categoryColors, name, moveTo);
+  if (!r.ok) return r;
+  const next = applyCategoryChange(r);
+  return { ok: true, count: r.changed.length, settings: next.settings };
+});
+
+// ---- IPC: calendar exceptions for one or more tasks at once ----
+ipcMain.handle('exceptions:apply', (_e, ids, exception) => {
+  const r = addExceptionToTasks(getTasks(), Array.isArray(ids) ? ids : [], exception || {});
+  if (!r.ok) return r;
+  for (const t of r.changed) saveTask(t);
+  return { ok: true, count: r.changed.length };
+});
+
 // ---- IPC: schedule preview ("simulatore") — next occurrences for an unsaved schedule ----
-ipcMain.handle('schedule:preview', (_e, schedule) => {
-  return upcomingOccurrencesForSchedule(schedule, new Date(), 8).map((d) => d.toISOString());
+ipcMain.handle('schedule:preview', (_e, schedule, exceptions) => {
+  return upcomingOccurrencesForSchedule(schedule, new Date(), 8, normalizeExceptions(exceptions)).map((d) => d.toISOString());
 });

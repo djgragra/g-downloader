@@ -1,6 +1,6 @@
 {
   "name": "g-downloader",
-  "version": "26.10.1",
+  "version": "26.10.2",
   "description": "App di download pianificati con nomi variabili, rename post-download e azioni successive",
   "main": "main.js",
   "type": "module",
@@ -12,7 +12,9 @@
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
-    "dist:linux": "electron-builder --linux"
+    "dist:linux": "electron-builder --linux",
+    "test": "node --test dev/*.test.js && node --import ./dev/register-stub.mjs --test dev/*.itest.js",
+    "test:unit": "node --test dev/*.test.js"
   },
   "dependencies": {
     "basic-ftp": "^6.2.1",
@@ -35,6 +37,7 @@
       "src/**/*",
       "renderer/**/*",
       "assets/**/*",
+      "CHANGELOG.md",
       "package.json"
     ],
     "directories": {
