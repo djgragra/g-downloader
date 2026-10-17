@@ -1014,3 +1014,14 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .whatsnew-list { margin: 8px 0 14px 18px; padding: 0; line-height: 1.5; }
 .about-links { margin: 6px 0 0 18px; padding: 0; line-height: 1.8; }
 .wait-window { margin-top: 6px; }
+
+/* Tip card in Help & info: the site's jar, one line, one cherry pill (apps/COMMON-FEATURES.md, section 6). */
+.tip-card { display: flex; align-items: center; gap: 18px; background: var(--bg-elev-2); }
+.tip-jar { width: 80px; height: auto; flex: none; }
+.tip-body p { margin: 0 0 10px; font-size: 13px; color: var(--text-dim); }
+.tip-pill {
+  padding: 6px 16px; border: 2px solid #FBF4E4; border-radius: 99px; background: #C8232C; color: #FBF4E4;
+  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+}
+.tip-pill:hover { background: #DE2D37; }
+.tip-pill:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }

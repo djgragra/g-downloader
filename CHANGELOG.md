@@ -2,6 +2,11 @@
 
 Versions use `YY.M.N`. Newest first.
 
+## 26.10.3 — 2026-10-17
+- **Email alerts no longer reach the sender's own mailbox.** The message went to the sender address in `To` with the real recipients in Bcc, so the mailbox used to send alerts received a copy of each one. Now `To` is `undisclosed-recipients:;` and only the recipients you listed receive the message.
+- **Tip card** in Help & About: the tip jar from the website, one line and a button that opens the website's support page in the app's language. No pop-ups, no reminders.
+- Dependencies updated: Electron 44.9.0, electron-store 12 (a settings file written by the previous version reads back unchanged), nodemailer 10.1.2, basic-ftp 6.2.3, cron-parser 5.10.2.
+
 ## 26.10.2 — 2026-10-14
 - **Wait for a file that is published late.** Each task can now keep trying every N minutes for at most M minutes (for example from 19:55 to 20:15) instead of failing at the first error. Every attempt checks the file: too small, empty, or a web page instead of the file counts as "not arrived yet"; a local file is awaited until its size stops changing. A wrong password (401) stops the wait at once.
 - **Calendar exceptions.** Per task, days or ranges of days on which the schedules do not run as usual: **Skip** (production stopped, a holiday) or **Treat as another weekday** (an agency applies its Sunday timetable on a Wednesday holiday: the "Mon–Fri" schedules stay quiet and the weekend ones run). One exception can be added to several tasks at once, picked one by one or by category. Skipped days show as "skipped (exception)" in the history, with no alert and no failure in the statistics or the report; manual runs are not affected.

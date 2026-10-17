@@ -43,6 +43,7 @@ import { buildSupportInfo } from './src/support.js';
 import { httpFetch } from './src/httpfetch.js';
 import { appendFileLog, pruneOldLogs, getLogDir, getLastError } from './src/filelog.js';
 import { M } from './src/i18n.js';
+import { isTipUrl } from './src/tip.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -589,7 +590,7 @@ ipcMain.handle('update:install', () => {
 // Only this repository's release pages, or the author's site.
 ipcMain.handle('update:open', (_e, url) => {
   const releases = `https://github.com/${getSettings().updateRepo}/releases/`;
-  if (url === 'https://onairgarage.com') return shell.openExternal(url);
+  if (url === 'https://onairgarage.com' || isTipUrl(url)) return shell.openExternal(url);
   if (typeof url === 'string' && url.startsWith('https://onairgarage.com/tools/g-downloader')) return shell.openExternal(url);
   if (url === 'mailto:hello@onairgarage.com') return shell.openExternal(url);
   return shell.openExternal(typeof url === 'string' && url.startsWith(releases) ? url : `${releases}latest`);

@@ -76,8 +76,9 @@ export async function sendEmail(cfg, subject, text, { t = fmt, transportFactory 
     socketTimeout: 20_000
   });
   try {
-    // one message, all recipients in Bcc: they do not see each other's addresses
-    const info = await transporter.sendMail({ from: cfg.from || cfg.user, to: cfg.from || cfg.user, bcc: to, subject, text });
+    // one message, all recipients in Bcc: they do not see each other's addresses. `to` is never the sender,
+    // or the sender's own mailbox would get a copy of every alert.
+    const info = await transporter.sendMail({ from: cfg.from || cfg.user, to: 'undisclosed-recipients:;', bcc: to, subject, text });
     const rejected = info?.rejected || [];
     if (rejected.length) throw new Error(t('{list}: rifiutati dal server', { list: rejected.join(', ') }));
   } catch (err) {
