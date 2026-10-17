@@ -26,13 +26,31 @@ test('one email to everybody, all in Bcc, from a connection that must be encrypt
   const { cfg, sent } = t.made[0];
   assert.equal(sent.length, 1);
   assert.deepEqual(sent[0].bcc, ['a@x.it', 'b@y.it']); // unique and valid only
-  assert.equal(sent[0].to, 'g@example.com'); // nobody sees the others' addresses
+  assert.equal(sent[0].to, 'undisclosed-recipients:;'); // nobody sees the others' addresses, and the sender gets no copy
   assert.equal(cfg.requireTLS, true);
   assert.deepEqual([cfg.connectionTimeout, cfg.greetingTimeout, cfg.socketTimeout], [15_000, 15_000, 20_000]);
   const secure = fakeTransport();
   await sendEmail({ ...mailCfg, secure: true, port: 465 }, 's', 'b', { transportFactory: secure.factory });
   assert.equal(secure.made[0].cfg.requireTLS, false);
   assert.equal(secure.made[0].cfg.secure, true);
+});
+
+test('the sender gets no copy unless it is a recipient (real nodemailer envelope)', async () => {
+  const nodemailer = (await import('nodemailer')).default;
+  const run = async (recipients) => {
+    let envelope;
+    const factory = () => {
+      const tr = nodemailer.createTransport({ streamTransport: true, buffer: true });
+      return { sendMail: async (m) => { const info = await tr.sendMail(m); envelope = info.envelope; return { rejected: [] }; }, close() {} };
+    };
+    await sendEmail({ ...mailCfg, recipients }, 's', 'b', { transportFactory: factory });
+    return envelope;
+  };
+  const other = await run(['gm@example.org']);
+  assert.equal(other.from, 'g@example.com');
+  assert.deepEqual(other.to, ['gm@example.org']); // the sender (g@example.com) is not in the envelope
+  const self = await run(['g@example.com', 'gm@example.org']);
+  assert.deepEqual(self.to, ['g@example.com', 'gm@example.org']); // a recipient that is also the sender: once
 });
 
 test('the old "to" string still works as the list of recipients', async () => {
