@@ -2383,6 +2383,9 @@ function bindBackupTab() {
   });
 }
 
+// The tip card opens the site's own page in the app's language (same three addresses as src/tip.js, tested).
+const TIP_URLS = { en: 'https://onairgarage.com/support/', it: 'https://onairgarage.com/it/support/', es: 'https://onairgarage.com/es/support/' };
+
 async function renderAbout() {
   const root = document.getElementById('editor-root');
   if (!state.appInfo) state.appInfo = await window.api.app.info();
@@ -2425,6 +2428,14 @@ async function renderAbout() {
         <li><a href="#" data-about-link="mailto:hello@onairgarage.com">hello@onairgarage.com</a></li>
         <li><a href="#" data-about-link="https://onairgarage.com">onairgarage.com</a></li>
       </ul>
+    </div>
+
+    <div class="card tip-card">
+      <img src="img/tip-jar.png" alt="" class="tip-jar" width="80" height="59" />
+      <div class="tip-body">
+        <p>${L("Ti è utile? Un caffè per i meccanici è sempre ben accetto.")}</p>
+        <button type="button" class="tip-pill" data-about-link="${TIP_URLS[lang] || TIP_URLS.en}">${L("Salvadanaio")}</button>
+      </div>
     </div>
 
     <div class="card">

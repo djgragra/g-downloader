@@ -4,6 +4,14 @@
 // the English/Spanish version according to settings.language; Italian and any missing text
 // fall back to the original. {name} placeholders are filled from the optional params object.
 const UI_TEXT = {
+ "Ti è utile? Un caffè per i meccanici è sempre ben accetto.": [
+  "Useful to you? A coffee for the mechanics is always welcome.",
+  "¿Te resulta útil? Un café para los mecánicos siempre es bienvenido."
+ ],
+ "Salvadanaio": [
+  "Tip jar",
+  "Hucha"
+ ],
  "Disattivo": [
   "Off",
   "Desactivado"
