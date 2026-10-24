@@ -241,8 +241,8 @@ const GUIDE_CONTENT = {
         p: 'In Impostazioni → Backup esporti e importi task, impostazioni, categorie e colori. "Includi password e token" è spento di default: le password restano fuori dal file e dopo l\'importazione l\'app elenca quelle da riscrivere. In Categorie puoi rinominare (se il nome esiste, le due categorie si uniscono) ed eliminare una categoria scegliendo dove spostare i suoi task.'
       },
       {
-        h: 'Primo avvio (app non firmata)',
-        p: 'L\'app è gratuita e non è firmata digitalmente. <b>macOS:</b> se compare "app danneggiata" o non si apre, clic destro → Apri, oppure nel Terminale: <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>. <b>Windows:</b> se compare SmartScreen, clicca "Ulteriori informazioni" → "Esegui comunque".'
+        h: 'Primo avvio su Windows e macOS',
+        p: 'L\'app è gratuita e senza certificato a pagamento. <b>macOS:</b> l\'app ha una firma ad-hoc: al primo avvio compare "sviluppatore non identificato", apri Impostazioni di Sistema → Privacy e sicurezza e clicca "Apri comunque". Se una versione precedente dice "app danneggiata", nel Terminale: <code>xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app</code>. <b>Windows:</b> se compare SmartScreen, clicca "Ulteriori informazioni" → "Esegui comunque".'
       },
       {
         h: 'Aggiornamenti',
@@ -311,8 +311,8 @@ const GUIDE_CONTENT = {
         p: 'In Settings → Backup you export and import tasks, settings, categories and colours. "Include passwords and tokens" is off by default: passwords stay out of the file and after the import the app lists the ones to type again. In Categories you can rename (if the name exists, the two categories merge) and delete a category, choosing where its tasks go.'
       },
       {
-        h: 'First launch (unsigned app)',
-        p: 'The app is free and not code-signed. <b>macOS:</b> if it says the app is damaged or cannot be opened, right-click it → Open, or run <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code> in Terminal. <b>Windows:</b> if SmartScreen appears, click "More info" → "Run anyway".'
+        h: 'First launch on Windows and macOS',
+        p: 'The app is free and has no paid certificate. <b>macOS:</b> the app is signed ad hoc: the first launch shows "unidentified developer", so open System Settings → Privacy & Security and click "Open Anyway". If an earlier version says the app is damaged, run in Terminal: <code>xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app</code>. <b>Windows:</b> if SmartScreen appears, click "More info" → "Run anyway".'
       },
       {
         h: 'Updates',
@@ -381,8 +381,8 @@ const GUIDE_CONTENT = {
         p: 'En Ajustes → Copia de seguridad exportas e importas tareas, ajustes, categorías y colores. "Incluir contraseñas y tokens" está desactivado por defecto: las contraseñas quedan fuera del archivo y tras la importación la app lista las que hay que reescribir. En Categorías puedes renombrar (si el nombre existe, las dos categorías se unen) y eliminar una categoría eligiendo adónde van sus tareas.'
       },
       {
-        h: 'Primer inicio (app sin firmar)',
-        p: 'La app es gratuita y no está firmada digitalmente. <b>macOS:</b> si aparece "app dañada" o no se abre, clic derecho → Abrir, o en Terminal: <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>. <b>Windows:</b> si aparece SmartScreen, pulsa "Más información" → "Ejecutar de todos modos".'
+        h: 'Primer inicio en Windows y macOS',
+        p: 'La app es gratuita y no tiene certificado de pago. <b>macOS:</b> la app tiene firma ad-hoc: el primer inicio muestra "desarrollador no identificado", abre Ajustes del Sistema → Privacidad y seguridad y pulsa "Abrir de todos modos". Si una versión anterior dice "app dañada", en Terminal: <code>xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app</code>. <b>Windows:</b> si aparece SmartScreen, pulsa "Más información" → "Ejecutar de todos modos".'
       },
       {
         h: 'Actualizaciones',

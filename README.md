@@ -26,11 +26,11 @@ By Graziano Melzi · [OnAir Garage](https://onairgarage.com) — contact: hello@
 
 Download the installer for your system from the [Releases](https://github.com/djgragra/g-downloader/releases) page and verify it against `SHA256SUMS.txt`.
 
-The app is free and **not code-signed**, so the first launch may show a warning:
+The app is free and has **no paid certificate** (no Apple or Microsoft account), so the first launch may show a warning:
 
-- **macOS**: if you see "app is damaged" or "cannot be opened", right-click the app → *Open*, or run:
+- **macOS**: the app is signed *ad hoc*, which is what lets an Apple Silicon Mac open it. The first launch still says "unidentified developer": open *System Settings → Privacy & Security* and click *Open Anyway* (right-click → *Open* no longer exists on macOS 15 and later). If an earlier version says the app is "damaged", run in Terminal:
   ```bash
-  xattr -dr com.apple.quarantine /Applications/G-Downloader.app
+  xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app
   ```
 - **Windows**: if SmartScreen appears, click *More info* → *Run anyway*.
 - **Linux**: `chmod +x G-Downloader-*.AppImage`, then run it.
@@ -74,7 +74,7 @@ Releases are built by GitHub Actions when a `v*` tag is pushed, or when the work
 
 ## Italiano
 
-App gratuita per download pianificati, sempre attiva nella tray. Scarica l'installer dalla pagina [Releases](https://github.com/djgragra/g-downloader/releases). L'app non è firmata: su macOS usa clic destro → Apri (o il comando `xattr` sopra); su Windows SmartScreen → "Ulteriori informazioni" → "Esegui comunque". Novità della 26.10.3: gli avvisi email non arrivano più alla casella del mittente (solo ai destinatari indicati) e in Aiuto e informazioni c'è il riquadro per lasciare una mancia. Novità della 26.10.2: **attesa del file** pubblicato in ritardo (riprova ogni N minuti per M minuti), **eccezioni di calendario** per task (salta un giorno, o "tratta come" un altro giorno della settimana, per più task o una categoria intera), avvisi email in Bcc con tre tentativi, **backup** senza password (a meno che tu lo chieda), rinomina/elimina categorie, aggiornamento guidato completo e pagina Aiuto e informazioni. Quando esce una nuova versione, l'app la segnala: "Scarica e installa" scarica l'installer giusto, ne verifica lo SHA-256 e lo avvia solo quando lo chiedi tu.
+App gratuita per download pianificati, sempre attiva nella tray. Scarica l'installer dalla pagina [Releases](https://github.com/djgragra/g-downloader/releases). L'app non ha un certificato a pagamento: su macOS è firmata ad-hoc, quindi al primo avvio usa Impostazioni di Sistema → Privacy e sicurezza → "Apri comunque" (per una versione precedente che dice "danneggiata" vale il comando sopra); su Windows SmartScreen → "Ulteriori informazioni" → "Esegui comunque". Novità della 26.10.4: **l'app per Mac con Apple Silicon si apre** (prima macOS diceva "app danneggiata": ora è firmata ad-hoc), il controllo del repository degli aggiornamenti rifiuta anche i nomi con `..`. Novità della 26.10.3: gli avvisi email non arrivano più alla casella del mittente (solo ai destinatari indicati) e in Aiuto e informazioni c'è il riquadro per lasciare una mancia. Novità della 26.10.2: **attesa del file** pubblicato in ritardo (riprova ogni N minuti per M minuti), **eccezioni di calendario** per task (salta un giorno, o "tratta come" un altro giorno della settimana, per più task o una categoria intera), avvisi email in Bcc con tre tentativi, **backup** senza password (a meno che tu lo chieda), rinomina/elimina categorie, aggiornamento guidato completo e pagina Aiuto e informazioni. Quando esce una nuova versione, l'app la segnala: "Scarica e installa" scarica l'installer giusto, ne verifica lo SHA-256 e lo avvia solo quando lo chiedi tu.
 
 ## License
 

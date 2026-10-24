@@ -13,7 +13,7 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <li>Interfaccia in <b>italiano, inglese e spagnolo</b>, tema chiaro e scuro, formati di data e ora personalizzabili.</li>
 <li><b>Aggiornamenti guidati</b>: l'app segnala le nuove versioni e scarica e verifica l'installer giusto, senza installarlo senza il tuo consenso.</li>
 </ul>
-<div class="note">L'app non è firmata digitalmente: al primo avvio Windows e macOS possono mostrare un avviso. Il capitolo 3 spiega come procedere.</div>
+<div class="note">L'app non ha un certificato a pagamento: al primo avvio Windows e macOS possono mostrare un avviso. Il capitolo 3 spiega come procedere.</div>
 """, False),
 ("Requisiti", """
 <table><tr><th>Sistema</th><th>Cosa serve</th></tr>
@@ -27,15 +27,14 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <p>I file di installazione si trovano nella pagina delle release: <code>github.com/djgragra/g-downloader/releases</code>. Insieme ai file c'è <code>SHA256SUMS.txt</code>, con le impronte per verificarne l'integrità.</p>
 <h3>3.1 Windows</h3>
 <ol><li>Scarica ed esegui <code>G-Downloader-Setup-{v}.exe</code>.</li>
-<li>Se compare la schermata blu <i>«Windows ha protetto il PC»</i> (SmartScreen), clicca <b>Ulteriori informazioni</b> e poi <b>Esegui comunque</b>: succede perché l'app non è firmata.</li>
+<li>Se compare la schermata blu <i>«Windows ha protetto il PC»</i> (SmartScreen), clicca <b>Ulteriori informazioni</b> e poi <b>Esegui comunque</b>: succede perché l'app non ha un certificato a pagamento.</li>
 <li>Scegli la cartella di installazione (o lascia quella proposta) e conferma. Verranno creati il collegamento sul desktop e nel menu Start.</li>
 <li>Al termine l'app si avvia da sola.</li></ol>
 <p><b>Disinstallazione:</b> Impostazioni → App → G-Downloader → Disinstalla. I tuoi task e le impostazioni restano nella cartella dati (vedi capitolo 17) finché non li elimini a mano.</p>
 <h3>3.2 macOS</h3>
 <ol><li>Apri il file <code>.dmg</code> giusto per il tuo Mac e trascina <b>G-Downloader</b> nella cartella <b>Applicazioni</b>.</li>
-<li>Avvia l'app da Applicazioni. Se macOS dice che l'app è <i>«danneggiata»</i> o che <i>«non può essere aperta»</i>, non è danneggiata: non è firmata. Hai due strade:
-<ul><li>clic destro (o Ctrl+clic) sull'app → <b>Apri</b> → <b>Apri</b>;</li>
-<li>oppure da Terminale:<pre><code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code></pre></li></ul></li>
+<li>Avvia l'app da Applicazioni. Se macOS dice che l'app è <i>«danneggiata»</i> o che <i>«non può essere aperta»</i>, non è danneggiata. L'app ha una firma ad-hoc, quindi al primo avvio compare <i>«sviluppatore non identificato»</i>: apri <b>Impostazioni di Sistema → Privacy e sicurezza</b> e clicca <b>Apri comunque</b> (il clic destro → Apri non esiste più da macOS 15). Se una versione precedente alla 26.10.4 dice che è danneggiata, da Terminale:
+<pre><code>xattr -cr /Applications/G-Downloader.app &amp;&amp; codesign --force --deep -s - /Applications/G-Downloader.app</code></pre></li>
 <li>L'icona compare nella barra dei menu in alto. Chiudendo la finestra l'app continua a lavorare.</li></ol>
 <p><b>Disinstallazione:</b> trascina l'app dal Cestino; i dati restano in <code>~/Library/Application Support/g-downloader</code>.</p>
 <h3>3.3 Linux</h3>
@@ -314,7 +313,7 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 """, False),
 ("Risoluzione dei problemi", """
 <table><tr><th>Problema</th><th>Cosa fare</th></tr>
-<tr><td>macOS: «l'app è danneggiata / non può essere aperta»</td><td>L'app non è firmata: clic destro → Apri, oppure <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>.</td></tr>
+<tr><td>macOS: «l'app è danneggiata / non può essere aperta»</td><td>Apri <i>Impostazioni di Sistema → Privacy e sicurezza → Apri comunque</i>; per una versione precedente alla 26.10.4, <code>xattr -cr /Applications/G-Downloader.app &amp;&amp; codesign --force --deep -s - /Applications/G-Downloader.app</code>.</td></tr>
 <tr><td>Windows: schermata «Windows ha protetto il PC»</td><td>Ulteriori informazioni → Esegui comunque.</td></tr>
 <tr><td>Linux: l'AppImage non parte</td><td>Rendilo eseguibile (<code>chmod +x</code>) e installa FUSE (<code>libfuse2</code>) se richiesto.</td></tr>
 <tr><td>Il download non parte all'ora prevista</td><td>Controlla che l'app sia in esecuzione (icona nella barra di sistema), che il task e la pianificazione siano attivi e guarda <i>Anteprima</i> e la console. Attiva l'avviso sulle pianificazioni saltate.</td></tr>

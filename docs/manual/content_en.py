@@ -13,7 +13,7 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <li>Interface in <b>Italian, English and Spanish</b>, light and dark theme, customisable date and time formats.</li>
 <li><b>Guided updates</b>: the app flags new versions and downloads and verifies the right installer, without installing anything without your say-so.</li>
 </ul>
-<div class="note">The app is not code-signed: on first launch Windows and macOS may show a warning. Chapter 3 explains what to do.</div>
+<div class="note">The app has no paid certificate: on first launch Windows and macOS may show a warning. Chapter 3 explains what to do.</div>
 """, False),
 ("Requirements", """
 <table><tr><th>System</th><th>What you need</th></tr>
@@ -27,15 +27,14 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <p>The installers are on the releases page: <code>github.com/djgragra/g-downloader/releases</code>. Next to them there is <code>SHA256SUMS.txt</code> with the checksums to verify their integrity.</p>
 <h3>3.1 Windows</h3>
 <ol><li>Download and run <code>G-Downloader-Setup-{v}.exe</code>.</li>
-<li>If the blue <i>"Windows protected your PC"</i> screen (SmartScreen) appears, click <b>More info</b> and then <b>Run anyway</b>: this happens because the app is not signed.</li>
+<li>If the blue <i>"Windows protected your PC"</i> screen (SmartScreen) appears, click <b>More info</b> and then <b>Run anyway</b>: this happens because the app has no paid certificate.</li>
 <li>Choose the installation folder (or keep the default) and confirm. Desktop and Start-menu shortcuts are created.</li>
 <li>When it finishes, the app starts automatically.</li></ol>
 <p><b>Uninstalling:</b> Settings → Apps → G-Downloader → Uninstall. Your tasks and settings stay in the data folder (chapter 17) until you delete them by hand.</p>
 <h3>3.2 macOS</h3>
 <ol><li>Open the right <code>.dmg</code> for your Mac and drag <b>G-Downloader</b> into the <b>Applications</b> folder.</li>
-<li>Start the app from Applications. If macOS says the app is <i>"damaged"</i> or <i>"cannot be opened"</i>, it is not damaged: it is not signed. You have two options:
-<ul><li>right-click (or Ctrl+click) the app → <b>Open</b> → <b>Open</b>;</li>
-<li>or from Terminal:<pre><code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code></pre></li></ul></li>
+<li>Start the app from Applications. If macOS says the app is <i>"damaged"</i> or <i>"cannot be opened"</i>, it is not damaged. The app is signed ad hoc, so the first launch says <i>"unidentified developer"</i>: open <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b> (right-click → Open no longer exists on macOS 15 and later). If a version before 26.10.4 says it is damaged, run from Terminal:
+<pre><code>xattr -cr /Applications/G-Downloader.app &amp;&amp; codesign --force --deep -s - /Applications/G-Downloader.app</code></pre></li>
 <li>The icon appears in the menu bar at the top. Closing the window does not stop the app.</li></ol>
 <p><b>Uninstalling:</b> drag the app to the Trash; data stays in <code>~/Library/Application Support/g-downloader</code>.</p>
 <h3>3.3 Linux</h3>
@@ -314,7 +313,7 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 """, False),
 ("Troubleshooting", """
 <table><tr><th>Problem</th><th>What to do</th></tr>
-<tr><td>macOS: "the app is damaged / cannot be opened"</td><td>The app is not signed: right-click → Open, or <code>xattr -dr com.apple.quarantine /Applications/G-Downloader.app</code>.</td></tr>
+<tr><td>macOS: "the app is damaged / cannot be opened"</td><td>Open <i>System Settings → Privacy &amp; Security → Open Anyway</i>; for a version before 26.10.4, <code>xattr -cr /Applications/G-Downloader.app &amp;&amp; codesign --force --deep -s - /Applications/G-Downloader.app</code>.</td></tr>
 <tr><td>Windows: "Windows protected your PC"</td><td>More info → Run anyway.</td></tr>
 <tr><td>Linux: the AppImage does not start</td><td>Make it executable (<code>chmod +x</code>) and install FUSE (<code>libfuse2</code>) if required.</td></tr>
 <tr><td>The download does not start at the scheduled time</td><td>Check that the app is running (tray icon), that the task and schedule are enabled, and look at <i>Preview</i> and the console. Turn on the missed-schedules alert.</td></tr>

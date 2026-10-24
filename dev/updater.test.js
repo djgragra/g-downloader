@@ -200,3 +200,25 @@ test('the changelog in the package has a What\'s new for the version in package.
   assert.ok(whatsNew(log, pkg.version), `CHANGELOG.md has no bullets for ${pkg.version}`);
   assert.ok(pkg.build.files.includes('CHANGELOG.md'), 'CHANGELOG.md must be packaged with the app');
 });
+
+test('a repository name made of dots is refused by the update check, not only by the settings', async () => {
+  const { validRepo } = await import('../src/updater.js');
+  for (const bad of ['../x', 'x/..', './x', '../..', 'x', '', null, 'a b/c']) assert.equal(validRepo(bad), false, String(bad));
+  for (const good of ['djgragra/g-downloader', 'a.b/c-d_e']) assert.equal(validRepo(good), true, good);
+  const r = await checkForUpdate({ repo: '../x', current: '1', fetchFn: async () => { throw new Error('must not be called'); } });
+  assert.equal(r.error, 'invalid-repo');
+});
+
+test('the new-version notice links to the app page on the site, not to GitHub', async () => {
+  const { PAGE_URL } = await import('../src/updater.js');
+  const names = ['G-Downloader-Setup-26.10.5.exe', 'SHA256SUMS.txt'];
+  const r = await checkForUpdate({ current: '26.10.4', fetchFn: async () => release('v26.10.5', names) });
+  assert.equal(r.pageUrl, 'https://onairgarage.com/tools/g-downloader/');
+  assert.equal(PAGE_URL, r.pageUrl);
+  assert.match(r.url, /^https:\/\/github\.com\//);
+  const fs = await import('node:fs');
+  const rd = (f) => fs.readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  assert.match(rd('src/notify.js'), /info\.pageUrl \|\| info\.url/);
+  assert.match(rd('renderer/app.js'), /updates\.open\(upd\.info\?\.pageUrl \|\| upd\.info\?\.url\)/);
+  assert.match(rd('main.js'), /onairgarage\.com\/tools\/g-downloader/);
+});

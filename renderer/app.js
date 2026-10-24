@@ -257,7 +257,7 @@ async function handleUpdateAction(action) {
   else if (action === 'install') installUpdate();
   else if (action === 'retry') (upd.retry === 'install' ? installUpdate() : startUpdateDownload());
   else if (action === 'cancel') window.api.updates.cancel();
-  else if (action === 'page' || action === 'notes') window.api.updates.open(upd.info?.url);
+  else if (action === 'page' || action === 'notes') window.api.updates.open(upd.info?.pageUrl || upd.info?.url);
   else if (action === 'later') {
     await window.api.updates.remindLater();
     upd.state = null;
@@ -2431,7 +2431,7 @@ async function renderAbout() {
     </div>
 
     <div class="card tip-card">
-      <img src="img/tip-jar.png" alt="" class="tip-jar" width="80" height="59" />
+      <button type="button" class="tip-jar-btn" data-about-link="${TIP_URLS[lang] || TIP_URLS.en}" aria-label="${L("Salvadanaio")}"><img src="img/tip-jar.png" alt="" class="tip-jar" width="80" height="59" /></button>
       <div class="tip-body">
         <p>${L("Ti è utile? Un caffè per i meccanici è sempre ben accetto.")}</p>
         <button type="button" class="tip-pill" data-about-link="${TIP_URLS[lang] || TIP_URLS.en}">${L("Salvadanaio")}</button>
@@ -2449,8 +2449,8 @@ async function renderAbout() {
     </div>
 
     <div class="card">
-      <h3>${L("Primo avvio: app non firmata")}</h3>
-      <p>${L("L'app è gratuita e non è firmata digitalmente. Windows: se compare SmartScreen, clicca \"Ulteriori informazioni\" e poi \"Esegui comunque\". macOS: se compare \"app danneggiata\" o non si apre, clic destro sull'app → Apri, oppure nel Terminale: xattr -dr com.apple.quarantine /Applications/G-Downloader.app")}</p>
+      <h3>${L("Primo avvio su Windows e macOS")}</h3>
+      <p>${L("L'app è gratuita e senza certificato a pagamento. Windows: se compare SmartScreen, clicca \"Ulteriori informazioni\" e poi \"Esegui comunque\". macOS: l'app ha una firma ad-hoc, quindi al primo avvio compare \"sviluppatore non identificato\": apri Impostazioni di Sistema → Privacy e sicurezza e clicca \"Apri comunque\" (il clic destro → Apri non esiste più da macOS 15). Se una versione precedente dice \"app danneggiata\", nel Terminale: xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app")}</p>
     </div>
 
     <div class="card">

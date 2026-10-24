@@ -12,4 +12,4 @@ Never send passwords, tokens or keys: they are not needed to describe a problem.
 
 ## What the app does and does not do
 
-The list of the addresses the app contacts is in the README. The installers are not signed (the README explains the first-launch warnings); each release publishes `SHA256SUMS.txt` and the app checks it before offering to install an update.
+The list of the addresses the app contacts is in the README. The installers have no paid certificate; the macOS app is signed ad hoc (the README explains the first-launch warnings); each release publishes `SHA256SUMS.txt` and the app checks it before offering to install an update.
