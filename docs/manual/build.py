@@ -1,8 +1,8 @@
-import html, subprocess, os, sys
+import html, shutil, subprocess, os, sys
 
 VER = sys.argv[1] if len(sys.argv) > 1 else "0.0.0"
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = sys.argv[2] if len(sys.argv) > 2 else HERE
+OUT = os.path.abspath(sys.argv[2] if len(sys.argv) > 2 else HERE)  # absolute: Chrome needs it for file:// and --print-to-pdf
 
 CSS = """
 @page { size: A4; margin: 20mm 18mm 20mm 18mm; }
@@ -41,14 +41,30 @@ def page(lang, d):
 sys.path.insert(0, HERE)
 from content_it import IT
 from content_en import EN
+from content_es import ES
 
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# garage-common: manual-pdf 1
+# Headless Chrome or Chromium: $CHROME, then Google Chrome on macOS, then the usual names on the path.
+def find_chrome():
+    mac = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    for c in (os.environ.get("CHROME"), mac if os.path.exists(mac) else None,
+              shutil.which("google-chrome"), shutil.which("chromium"), shutil.which("chromium-browser")):
+        if c and os.path.exists(c):
+            return c
+    sys.exit("No Chrome or Chromium found: set CHROME to its path")
 
-for lang, d, name in (('it', IT, f'G-Downloader-Manuale-{VER}'), ('en', EN, f'G-Downloader-Manual-{VER}')):
-    h = os.path.join(OUT, f'{name}.html')
-    open(h, 'w').write(page(lang, d).replace('{v}', VER))
-    out = os.path.join(OUT, f'{name}.pdf')
-    subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--no-pdf-header-footer',
-                    f'--print-to-pdf={out}', f'file://{h}'], check=True, capture_output=True)
+CHROME = find_chrome()
+NAME = "G-Downloader"
+
+# the three manuals of a release: <Name>-Manual-<LANG>-<version>.pdf
+for lang, d in (("en", EN), ("it", IT), ("es", ES)):
+    name = f"{NAME}-Manual-{lang.upper()}-{VER}"
+    h = os.path.join(OUT, f"{name}.html")
+    open(h, "w").write(page(lang, d).replace("{v}", VER))
+    out = os.path.join(OUT, f"{name}.pdf")
+    flags = ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", f"--print-to-pdf={out}"]
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        flags.append("--no-sandbox")  # root in a container
+    subprocess.run([CHROME, *flags, f"file://{h}"], check=True, capture_output=True)
     os.remove(h)
     print(out, os.path.getsize(out))

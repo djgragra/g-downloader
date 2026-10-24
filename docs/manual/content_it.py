@@ -250,7 +250,6 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 </ul>
 """, False),
 ("Impostazioni", """
-<table><tr><th>Sezione</th><th>Contenuto</th></tr>
 <p>Le schede sono, in quest'ordine, le stesse in tutte le app OnAir Garage:</p>
 <table><tr><th>Scheda</th><th>Contenuto</th></tr>
 <tr><td>Generali</td><td>tema chiaro/scuro · lingua · formato di data e ora · <b>nome di questa installazione</b> (compare negli avvisi) · <b>uso non presidiato</b>: avvio all'accensione del computer, avvio ridotto a icona, <b>computer sempre sveglio</b>, icona nella barra dei menu · notifiche di successo e di errore · apertura della cartella cliccando la notifica · cartella di destinazione predefinita · tentativi e attesa predefiniti</td></tr>

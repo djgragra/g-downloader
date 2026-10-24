@@ -250,7 +250,6 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 </ul>
 """, False),
 ("Settings", """
-<table><tr><th>Section</th><th>Content</th></tr>
 <p>The tabs are, in this order, the same in every OnAir Garage app:</p>
 <table><tr><th>Tab</th><th>Content</th></tr>
 <tr><td>General</td><td>light/dark theme · language · date and time format · <b>name of this installation</b> (shown in alerts) · <b>unattended use</b>: start when the computer starts, start minimized, <b>keep the computer awake</b>, menu-bar icon · success and error notifications · open the folder when clicking the notification · default destination folder · default retries and wait</td></tr>
