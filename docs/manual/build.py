@@ -2,7 +2,7 @@ import html, shutil, subprocess, os, sys
 
 VER = sys.argv[1] if len(sys.argv) > 1 else "0.0.0"
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = sys.argv[2] if len(sys.argv) > 2 else HERE
+OUT = os.path.abspath(sys.argv[2] if len(sys.argv) > 2 else HERE)  # absolute: Chrome needs it for file:// and --print-to-pdf
 
 CSS = """
 @page { size: A4; margin: 20mm 18mm 20mm 18mm; }
