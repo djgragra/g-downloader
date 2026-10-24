@@ -3,7 +3,7 @@
 Versions use `YY.M.N`. Newest first.
 
 ## 26.10.4 — 2026-10-24
-- **The macOS app now opens on Apple Silicon Macs.** The app used to leave the build with a signature that the build's own changes had invalidated, and an Apple Silicon Mac said "G-Downloader is damaged". It is now signed ad hoc (no Apple account involved) and every release checks the signature of both disk images before publishing. The first launch still shows "unidentified developer": open *System Settings → Privacy & Security* and click *Open Anyway* (right-click → Open no longer exists on macOS 15 and later). If you already installed an earlier version that says "damaged", run `xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app` once. Thanks to Rob, who reported the problem on a Mac with Apple Silicon.
+- **The macOS app now opens on Apple Silicon Macs.** The app used to leave the build with a signature that the build's own changes had invalidated, and an Apple Silicon Mac said "G-Downloader is damaged". It is now signed ad hoc (no Apple account involved) and every release checks the signature of both disk images before publishing. The first launch still shows "unidentified developer": open *System Settings → Privacy & Security* and click *Open Anyway* (right-click → Open no longer exists on macOS 15 and later). If you already installed an earlier version that says "damaged", run `xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app` once.
 - The updates repository check now rejects names made of dots (`../x`) in the update module as well, not only in the settings.
 
 ## 26.10.3 — 2026-10-17
