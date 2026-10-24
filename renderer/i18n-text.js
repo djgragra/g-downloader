@@ -2176,13 +2176,13 @@ const UI_TEXT = {
   "Open source components",
   "Componentes de código abierto"
  ],
- "Primo avvio: app non firmata": [
-  "First launch: unsigned app",
-  "Primer inicio: app sin firmar"
+ "Primo avvio su Windows e macOS": [
+  "First launch on Windows and macOS",
+  "Primer inicio en Windows y macOS"
  ],
- "L'app è gratuita e non è firmata digitalmente. Windows: se compare SmartScreen, clicca \"Ulteriori informazioni\" e poi \"Esegui comunque\". macOS: se compare \"app danneggiata\" o non si apre, clic destro sull'app → Apri, oppure nel Terminale: xattr -dr com.apple.quarantine /Applications/G-Downloader.app": [
-  "The app is free and not digitally signed. Windows: if SmartScreen appears, click \"More info\" and then \"Run anyway\". macOS: if you see \"app is damaged\" or it does not open, right-click the app → Open, or in Terminal: xattr -dr com.apple.quarantine /Applications/G-Downloader.app",
-  "La app es gratuita y no está firmada digitalmente. Windows: si aparece SmartScreen, pulsa \"Más información\" y luego \"Ejecutar de todos modos\". macOS: si aparece \"app dañada\" o no se abre, clic derecho en la app → Abrir, o en Terminal: xattr -dr com.apple.quarantine /Applications/G-Downloader.app"
+ "L'app è gratuita e senza certificato a pagamento. Windows: se compare SmartScreen, clicca \"Ulteriori informazioni\" e poi \"Esegui comunque\". macOS: l'app ha una firma ad-hoc, quindi al primo avvio compare \"sviluppatore non identificato\": apri Impostazioni di Sistema → Privacy e sicurezza e clicca \"Apri comunque\" (il clic destro → Apri non esiste più da macOS 15). Se una versione precedente dice \"app danneggiata\", nel Terminale: xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app": [
+  "The app is free and has no paid certificate. Windows: if SmartScreen appears, click \"More info\" and then \"Run anyway\". macOS: the app is signed ad hoc, so the first launch shows \"unidentified developer\": open System Settings → Privacy & Security and click \"Open Anyway\" (right-click → Open no longer exists since macOS 15). If an earlier version says \"app is damaged\", in Terminal: xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app",
+  "La app es gratuita y no tiene certificado de pago. Windows: si aparece SmartScreen, pulsa \"Más información\" y luego \"Ejecutar de todos modos\". macOS: la app tiene firma ad-hoc, así que el primer inicio muestra \"desarrollador no identificado\": abre Ajustes del Sistema → Privacidad y seguridad y pulsa \"Abrir de todos modos\" (clic derecho → Abrir ya no existe desde macOS 15). Si una versión anterior dice \"app dañada\", en Terminal: xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app"
  ],
  "✓ Copiato negli appunti": [
   "✓ Copied to the clipboard",

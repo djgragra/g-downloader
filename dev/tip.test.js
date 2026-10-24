@@ -32,3 +32,10 @@ test('the interface uses the same three addresses and has the texts in English, 
   assert.match(app, /data-about-link="\$\{TIP_URLS\[lang\]/);
   assert.ok(fs.existsSync(new URL('../renderer/img/tip-jar.png', import.meta.url)));
 });
+
+test('the tip jar itself is a button that opens the same page as the pill', () => {
+  const app = read('renderer/app.js');
+  assert.match(app, /<button type="button" class="tip-jar-btn" data-about-link="\$\{TIP_URLS\[lang\] \|\| TIP_URLS\.en\}"/);
+  assert.match(app, /class="tip-jar-btn"[^>]*aria-label="\$\{L\("Salvadanaio"\)\}"><img src="img\/tip-jar\.png"/);
+  assert.match(read('renderer/style.css'), /\.tip-jar-btn:focus-visible/);
+});

@@ -1,6 +1,6 @@
 {
   "name": "g-downloader",
-  "version": "26.10.3",
+  "version": "26.10.4",
   "description": "App di download pianificati con nomi variabili, rename post-download e azioni successive",
   "main": "main.js",
   "type": "module",
@@ -31,6 +31,7 @@
     "appId": "com.onairgarage.gdownloader",
     "productName": "G-Downloader",
     "publish": null,
+    "afterPack": "dev/sign-adhoc.cjs",
     "files": [
       "main.js",
       "preload.cjs",

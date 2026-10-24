@@ -2,6 +2,10 @@
 
 Versions use `YY.M.N`. Newest first.
 
+## 26.10.4 — 2026-10-24
+- **The macOS app now opens on Apple Silicon Macs.** The app used to leave the build with a signature that the build's own changes had invalidated, and an Apple Silicon Mac said "G-Downloader is damaged". It is now signed ad hoc (no Apple account involved) and every release checks the signature of both disk images before publishing. The first launch still shows "unidentified developer": open *System Settings → Privacy & Security* and click *Open Anyway* (right-click → Open no longer exists on macOS 15 and later). If you already installed an earlier version that says "damaged", run `xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app` once.
+- The updates repository check now rejects names made of dots (`../x`) in the update module as well, not only in the settings.
+
 ## 26.10.3 — 2026-10-17
 - **Email alerts no longer reach the sender's own mailbox.** The message went to the sender address in `To` with the real recipients in Bcc, so the mailbox used to send alerts received a copy of each one. Now `To` is `undisclosed-recipients:;` and only the recipients you listed receive the message.
 - **Tip card** in Help & About: the tip jar from the website, one line and a button that opens the website's support page in the app's language. No pop-ups, no reminders.

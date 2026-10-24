@@ -14,6 +14,10 @@ import path from 'node:path';
 export const REPO = 'djgragra/g-downloader';
 export const PRODUCT = 'G-Downloader';
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
+// "owner/name" made only of ordinary characters; a part made of dots ("..") is never a repository.
+export const validRepo = (repo) => REPO_RE.test(repo || '') && !String(repo).split('/').some((p) => /^\.+$/.test(p));
+// The page of the app on the author's site: what a new-version notice links to (not GitHub).
+export const PAGE_URL = 'https://onairgarage.com/tools/g-downloader/';
 const DAY = 86_400_000;
 const STALL_MS = 60_000; // no byte for this long: the download is given up and cleaned up
 
@@ -59,7 +63,7 @@ export function releaseNotesSummary(body, maxLines = 6, maxChars = 500) {
 }
 
 export async function checkForUpdate({ repo = REPO, current, fetchFn }) {
-  if (!REPO_RE.test(repo || '')) return { ok: false, current, error: 'invalid-repo' };
+  if (!validRepo(repo)) return { ok: false, current, error: 'invalid-repo' };
   try {
     const res = await fetchFn(`https://api.github.com/repos/${repo}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json', 'User-Agent': `${PRODUCT}/${current}` },
@@ -77,6 +81,7 @@ export async function checkForUpdate({ repo = REPO, current, fetchFn }) {
       available: isNewer(latest, current),
       // only ever this repository's release page, never a URL taken as-is from the response
       url: `https://github.com/${repo}/releases/tag/${encodeURIComponent(rel.tag_name || '')}`,
+      pageUrl: PAGE_URL,
       notes: releaseNotesSummary(rel.body),
       installer: pickInstaller(assets),
       sumsUrl: assets.find((a) => a.name === 'SHA256SUMS.txt')?.url || null

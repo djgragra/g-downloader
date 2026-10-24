@@ -115,7 +115,7 @@ export function failureText(t, task, error, when = new Date(), locale = undefine
 export function updateText(t, info) {
   return {
     subject: t('Nuova versione {latest} disponibile', { latest: info.latest }),
-    body: t('È disponibile la nuova versione {latest} di G-Downloader (installata: {current}).\nApri l\'app: in alto trovi l\'avviso con "Scarica e installa".\n{url}', { latest: info.latest, current: info.current, url: info.url })
+    body: t('È disponibile la nuova versione {latest} di G-Downloader (installata: {current}).\nApri l\'app: in alto trovi l\'avviso con "Scarica e installa".\n{url}', { latest: info.latest, current: info.current, url: info.pageUrl || info.url })
   };
 }
 

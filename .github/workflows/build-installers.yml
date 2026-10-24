@@ -97,8 +97,24 @@ jobs:
       - name: Build ${{ matrix.name }} installer
         run: ${{ matrix.command }}
         env:
-          # No signing certificates: builds are unsigned.
+          # No paid certificate. The macOS app is signed ad hoc by the afterPack hook (dev/sign-adhoc.cjs).
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Check the signature of the apps inside the macOS disk images
+        if: matrix.name == 'macos'
+        run: |
+          set -e
+          for DMG in release/*.dmg; do
+            MNT=$(mktemp -d)
+            hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT" -quiet
+            APP=$(ls -d "$MNT"/*.app | head -1)
+            echo "== $DMG"
+            STATUS=0
+            codesign --verify --deep --strict --verbose=2 "$APP" || STATUS=$?
+            codesign -dv "$APP" 2>&1 | grep -E "Signature|Identifier"
+            hdiutil detach "$MNT" -quiet || { sleep 3; hdiutil detach "$MNT" -quiet || hdiutil detach "$MNT" -force -quiet; }
+            [ "$STATUS" -eq 0 ] || { echo "::error::Invalid signature in $DMG"; exit 1; }
+          done
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v7
