@@ -21,6 +21,8 @@ const PLACEHOLDERS = [
   { label: '{date:yyyy-MM-dd}', desc: 'Data ISO' },
   { label: '{time:HHmmss}', desc: 'Ora corrente' },
   { label: '{date+1h:H}', desc: 'Ora successiva (es. 7 alle 6:57); anche -1d, +30m ...' },
+  { label: '{tz:lower}', desc: 'Fuso orario del PC (gmt/bst, cet/cest); anche {tz:Europe/London:upper}' },
+  { label: '{dst:bst|gmt}', desc: "Primo testo con l'ora legale, secondo senza; anche {dst@Europe/London:bst|gmt}" },
   { label: '{seq:4}', desc: 'Contatore progressivo (0001, 0002, ...)' },
   { label: '{rand:6}', desc: 'Stringa casuale' }
 ];

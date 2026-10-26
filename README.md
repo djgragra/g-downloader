@@ -6,7 +6,7 @@ By Graziano Melzi · [OnAir Garage](https://onairgarage.com) — contact: hello@
 
 ## Features
 
-- **Dynamic URLs and filenames**: `{date:yyyyMMdd}`, `{time:HHmmss}`, `{seq:4}`, `{rand:6}`, `{env:NAME}`, with date offsets.
+- **Dynamic URLs and filenames**: `{date:yyyyMMdd}`, `{time:HHmmss}`, `{seq:4}`, `{rand:6}`, `{env:NAME}`, with date offsets and time zones: `{tz:lower}` (gmt/bst, cet/cest), `{dst:bst|gmt}` (text that depends on daylight saving time), `{time@Europe/London:HH}`.
 - **Sources**: HTTP(S) (with basic auth and POST body), FTP/FTPS, local or network files.
 - **Flexible schedules**: several independent schedules per task (weekdays + times, one-off, every N minutes/hours, cron expression), with optional start/end.
 - **Post-download actions**: run a program, move the file, open it, system notification; placeholders `{filepath}` `{filename}` `{folder}` `{taskName}`. Download and actions can also be run **separately and by hand** (*Download only*, *Actions only*, *Actions on another file…*, or a single action, with a *Preview* of the resolved commands), e.g. when a file arrived by email. Each schedule can also stop after the download, or wait for your confirmation (with an email/Telegram notice) before running the actions.

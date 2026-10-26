@@ -91,6 +91,9 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <tr><td><code>{date:yyyy-MM-dd}</code></td><td>ISO date, e.g. <code>2026-09-26</code></td></tr>
 <tr><td><code>{time:HHmmss}</code></td><td>current time, e.g. <code>084500</code></td></tr>
 <tr><td><code>{date+1h:H}</code></td><td><b>shifted</b> date/time: here the next hour (e.g. 7 at 6:57). Also <code>-1d</code>, <code>+30m</code>, etc.</td></tr>
+<tr><td><code>{tz:lower}</code></td><td>abbreviation of the time zone of this computer, e.g. <code>gmt</code>/<code>bst</code> or <code>cet</code>/<code>cest</code> (changes with daylight saving time). <code>{tz}</code> keeps the capitals; <code>{tz:Europe/London:upper}</code> uses a fixed zone (any IANA name)</td></tr>
+<tr><td><code>{dst:bst|gmt}</code></td><td>the <b>first</b> text while daylight saving time is on, the <b>second</b> otherwise (any text; for another zone: <code>{dst@Europe/London:bst|gmt}</code>)</td></tr>
+<tr><td><code>{time@Europe/London:HH}</code></td><td>date or time as the wall clock of <b>another zone</b>: <code>{date@…:…}</code> and <code>{time@…:…}</code></td></tr>
 <tr><td><code>{seq:4}</code></td><td>running counter per task (<code>0001</code>, <code>0002</code>, …)</td></tr>
 <tr><td><code>{rand:6}</code></td><td>random string of 6 characters</td></tr>
 <tr><td><code>{env:NAME}</code></td><td>value of an environment variable</td></tr></table>

@@ -1064,6 +1064,14 @@ const UI_TEXT = {
   "Running counter (0001, 0002, ...)",
   "Contador progresivo (0001, 0002, ...)"
  ],
+ "Fuso orario del PC (gmt/bst, cet/cest); anche {tz:Europe/London:upper}": [
+  "Time zone of the PC (gmt/bst, cet/cest); also {tz:Europe/London:upper}",
+  "Zona horaria del PC (gmt/bst, cet/cest); también {tz:Europe/London:upper}"
+ ],
+ "Primo testo con l'ora legale, secondo senza; anche {dst@Europe/London:bst|gmt}": [
+  "First text while daylight saving time is on, second text otherwise; also {dst@Europe/London:bst|gmt}",
+  "Primer texto con el horario de verano, segundo sin él; también {dst@Europe/London:bst|gmt}"
+ ],
  "Stringa casuale": [
   "Random string",
   "Cadena aleatoria"

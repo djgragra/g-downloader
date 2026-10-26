@@ -6,12 +6,18 @@ import { format, addMinutes, addHours, addDays } from 'date-fns';
 //   {time:FORMAT}      -> same engine, use for time tokens e.g. {time:HHmm}
 //   {date+1h:H}        -> date/time shifted by an offset: +/-N then m (minutes), h (hours) or d (days),
 //                         e.g. {date+1h:H} = next hour, {date-1d:yyyyMMdd} = yesterday
+//   {date@Europe/London:HHmm} -> the same, as the wall clock of another time zone (IANA name)
+//   {tz}               -> abbreviation of the zone the app runs in (GMT/BST, CET/CEST, ...)
+//   {tz:Europe/London} -> the abbreviation of a fixed zone; add :lower or :upper for the case,
+//                         e.g. {tz:lower}, {tz:Europe/London:upper}; the date offset works too: {tz+1d}
+//   {dst:bst|gmt}      -> first text while daylight saving time is on, second text otherwise
+//                         (zone: this computer's, or {dst@Europe/London:bst|gmt})
 //   {seq}              -> per-task incrementing counter
 //   {seq:N}            -> counter zero-padded to N digits
 //   {rand}             -> short random alphanumeric string
 //   {rand:N}           -> random string of length N
 //   {env:NAME}         -> value of environment variable NAME
-const PLACEHOLDER_RE = /\{([a-zA-Z]+)(?:([+-]\d+)([mhd]))?(?::([^}]*))?\}/g;
+const PLACEHOLDER_RE = /\{([a-zA-Z]+)(?:([+-]\d+)([mhd]))?(?:@([A-Za-z0-9_+\-/]+))?(?::([^}]*))?\}/g;
 
 function shifted(now, amount, unit) {
   if (!amount) return now;
@@ -28,16 +34,69 @@ function randomString(len = 6) {
   return out;
 }
 
+// Intl throws on a zone name it does not know; the placeholder is then left as typed.
+function zoneParts(date, timeZone, options) {
+  return new Intl.DateTimeFormat('en-GB', { ...(timeZone ? { timeZone } : {}), ...options }).formatToParts(date);
+}
+
+// Offset from UTC, in minutes, of a zone at an instant (this computer's zone when none is given).
+function zoneOffset(date, timeZone) {
+  const p = Object.fromEntries(zoneParts(date, timeZone, {
+    hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric'
+  }).map((x) => [x.type, x.value]));
+  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return Math.round((asUtc - Math.floor(date.getTime() / 1000) * 1000) / 60000);
+}
+
+// The wall clock of a zone as a local Date, so date-fns formats it with the usual letters.
+function inZone(date, timeZone) {
+  if (!timeZone) return date;
+  const p = Object.fromEntries(zoneParts(date, timeZone, {
+    hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric'
+  }).map((x) => [x.type, x.value]));
+  return new Date(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second, date.getMilliseconds());
+}
+
+// Daylight saving time is on when the offset is above the smaller of the two yearly extremes.
+function isDst(date, timeZone) {
+  const year = date.getUTCFullYear();
+  const jan = zoneOffset(new Date(Date.UTC(year, 0, 1)), timeZone);
+  const jul = zoneOffset(new Date(Date.UTC(year, 6, 1)), timeZone);
+  return jan !== jul && zoneOffset(date, timeZone) > Math.min(jan, jul);
+}
+
+function zoneAbbreviation(date, timeZone) {
+  return zoneParts(date, timeZone, { timeZoneName: 'short' }).find((x) => x.type === 'timeZoneName')?.value ?? '';
+}
+
 export function resolveTemplate(template, ctx = {}) {
   const now = ctx.now instanceof Date ? ctx.now : new Date();
   const seq = Number.isFinite(ctx.seq) ? ctx.seq : 0;
 
-  return String(template).replace(PLACEHOLDER_RE, (match, key, amount, unit, arg) => {
+  return String(template).replace(PLACEHOLDER_RE, (match, key, amount, unit, zone, arg) => {
+    try {
+      switch (key) {
+        case 'tz': {
+          // {tz}, {tz:lower}, {tz:Europe/London}, {tz:Europe/London:upper}
+          const parts = (arg || '').split(':');
+          let letterCase = '';
+          if (/^(lower|upper)$/i.test(parts[parts.length - 1])) letterCase = parts.pop().toLowerCase();
+          const abbr = zoneAbbreviation(shifted(now, amount, unit), zone || parts[0] || undefined);
+          return letterCase === 'lower' ? abbr.toLowerCase() : letterCase === 'upper' ? abbr.toUpperCase() : abbr;
+        }
+        case 'dst': {
+          const [on, off = ''] = String(arg ?? '').split('|');
+          return isDst(shifted(now, amount, unit), zone) ? on : off;
+        }
+        case 'date':
+          return format(inZone(shifted(now, amount, unit), zone), arg && arg.length ? arg : 'yyyy-MM-dd');
+        case 'time':
+          return format(inZone(shifted(now, amount, unit), zone), arg && arg.length ? arg : 'HHmmss');
+      }
+    } catch {
+      return match; // unknown zone name
+    }
     switch (key) {
-      case 'date':
-        return format(shifted(now, amount, unit), arg && arg.length ? arg : 'yyyy-MM-dd');
-      case 'time':
-        return format(shifted(now, amount, unit), arg && arg.length ? arg : 'HHmmss');
       case 'seq': {
         const digits = arg ? parseInt(arg, 10) : 0;
         return digits > 0 ? String(seq).padStart(digits, '0') : String(seq);

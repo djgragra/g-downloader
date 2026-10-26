@@ -91,6 +91,9 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <tr><td><code>{date:yyyy-MM-dd}</code></td><td>data ISO, es. <code>2026-09-26</code></td></tr>
 <tr><td><code>{time:HHmmss}</code></td><td>ora corrente, es. <code>084500</code></td></tr>
 <tr><td><code>{date+1h:H}</code></td><td>data/ora <b>spostata</b>: qui l'ora successiva (es. 7 alle 6:57). Sono possibili anche <code>-1d</code>, <code>+30m</code>, ecc.</td></tr>
+<tr><td><code>{tz:lower}</code></td><td>abbreviazione del fuso orario del computer, es. <code>gmt</code>/<code>bst</code> o <code>cet</code>/<code>cest</code> (cambia con l'ora legale). <code>{tz}</code> lascia le maiuscole; <code>{tz:Europe/London:upper}</code> usa un fuso fisso (qualsiasi nome IANA)</td></tr>
+<tr><td><code>{dst:bst|gmt}</code></td><td>il <b>primo</b> testo quando c'è l'ora legale, il <b>secondo</b> altrimenti (testo libero; per un altro fuso: <code>{dst@Europe/London:bst|gmt}</code>)</td></tr>
+<tr><td><code>{time@Europe/London:HH}</code></td><td>data o ora come orologio di <b>un altro fuso</b>: <code>{date@…:…}</code> e <code>{time@…:…}</code></td></tr>
 <tr><td><code>{seq:4}</code></td><td>contatore progressivo per task (<code>0001</code>, <code>0002</code>, …)</td></tr>
 <tr><td><code>{rand:6}</code></td><td>stringa casuale di 6 caratteri</td></tr>
 <tr><td><code>{env:NOME}</code></td><td>valore di una variabile d'ambiente</td></tr></table>

@@ -1,6 +1,6 @@
 {
   "name": "g-downloader",
-  "version": "26.10.4",
+  "version": "26.10.5",
   "description": "App di download pianificati con nomi variabili, rename post-download e azioni successive",
   "main": "main.js",
   "type": "module",

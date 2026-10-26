@@ -91,6 +91,9 @@ ES = dict(manual="Manual de usuario", version="Versión", license="Licencia MIT 
 <tr><td><code>{date:yyyy-MM-dd}</code></td><td>fecha ISO, p. ej. <code>2026-09-26</code></td></tr>
 <tr><td><code>{time:HHmmss}</code></td><td>hora actual, p. ej. <code>084500</code></td></tr>
 <tr><td><code>{date+1h:H}</code></td><td>fecha/hora <b>desplazada</b>: aquí la hora siguiente (p. ej. 7 a las 6:57). También <code>-1d</code>, <code>+30m</code>, etc.</td></tr>
+<tr><td><code>{tz:lower}</code></td><td>abreviatura de la zona horaria del ordenador, p. ej. <code>gmt</code>/<code>bst</code> o <code>cet</code>/<code>cest</code> (cambia con el horario de verano). <code>{tz}</code> mantiene las mayúsculas; <code>{tz:Europe/London:upper}</code> usa una zona fija (cualquier nombre IANA)</td></tr>
+<tr><td><code>{dst:bst|gmt}</code></td><td>el <b>primer</b> texto con el horario de verano, el <b>segundo</b> en caso contrario (texto libre; para otra zona: <code>{dst@Europe/London:bst|gmt}</code>)</td></tr>
+<tr><td><code>{time@Europe/London:HH}</code></td><td>fecha u hora como reloj de <b>otra zona</b>: <code>{date@…:…}</code> y <code>{time@…:…}</code></td></tr>
 <tr><td><code>{seq:4}</code></td><td>contador progresivo por tarea (<code>0001</code>, <code>0002</code>, …)</td></tr>
 <tr><td><code>{rand:6}</code></td><td>cadena aleatoria de 6 caracteres</td></tr>
 <tr><td><code>{env:NOMBRE}</code></td><td>valor de una variable de entorno</td></tr></table>
