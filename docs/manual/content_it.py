@@ -99,6 +99,7 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <tr><td><code>{env:NOME}</code></td><td>valore di una variabile d'ambiente</td></tr></table>
 <p>Il formato tra i due punti usa le lettere standard: <code>yyyy</code> anno, <code>MM</code> mese, <code>dd</code> giorno, <code>HH</code> ore (00–23), <code>mm</code> minuti, <code>ss</code> secondi.</p>
 <p><b>Esempio:</b> <code>https://esempio.com/audio/programma_{date:yyyyMMdd}_{date+1h:HH}.mp3</code> scarica ogni ora il file dell'ora successiva.</p>
+<p><b>Attorno a mezzanotte:</b> se il nome porta la data e l'ora successiva, sposta <b>entrambe</b>: <code>BULLETIN_{date+1h:yyyyMMdd}_{date+1h:HH}.mp2</code>. Alle 23:57 dà la data del giorno dopo con ora <code>00</code>; con <code>{date:yyyyMMdd}</code> non spostato il file di mezzanotte avrebbe la data sbagliata.</p>
 <p>Per i task il cui URL dipende da data e ora compare il menu <b>«Esegui edizione…»</b>: elenca le ultime occorrenze pianificate e permette di scaricare a mano una edizione saltata, usando la sua data e ora nel nome del file.</p>
 """, False),
 ("Pianificazioni", """

@@ -99,6 +99,7 @@ ES = dict(manual="Manual de usuario", version="Versión", license="Licencia MIT 
 <tr><td><code>{env:NOMBRE}</code></td><td>valor de una variable de entorno</td></tr></table>
 <p>El formato tras los dos puntos usa las letras habituales: <code>yyyy</code> año, <code>MM</code> mes, <code>dd</code> día, <code>HH</code> horas (00–23), <code>mm</code> minutos, <code>ss</code> segundos.</p>
 <p><b>Ejemplo:</b> <code>https://example.com/audio/programa_{date:yyyyMMdd}_{date+1h:HH}.mp3</code> descarga cada hora el archivo de la hora siguiente.</p>
+<p><b>Cerca de medianoche:</b> si el nombre lleva la fecha y la hora siguiente, desplaza <b>ambas</b>: <code>BULLETIN_{date+1h:yyyyMMdd}_{date+1h:HH}.mp2</code>. A las 23:57 da la fecha del día siguiente con hora <code>00</code>; con <code>{date:yyyyMMdd}</code> sin desplazar, el archivo de medianoche tendría la fecha equivocada.</p>
 <p>Para las tareas cuya URL depende de la fecha y la hora aparece un menú <b>«Ejecutar edición…»</b>: enumera las últimas apariciones programadas y permite descargar a mano una edición perdida, usando su fecha y hora en el nombre del archivo.</p>
 """, False),
 ("Programaciones", """

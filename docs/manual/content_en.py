@@ -99,6 +99,7 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <tr><td><code>{env:NAME}</code></td><td>value of an environment variable</td></tr></table>
 <p>The format after the colon uses the standard letters: <code>yyyy</code> year, <code>MM</code> month, <code>dd</code> day, <code>HH</code> hours (00–23), <code>mm</code> minutes, <code>ss</code> seconds.</p>
 <p><b>Example:</b> <code>https://example.com/audio/show_{date:yyyyMMdd}_{date+1h:HH}.mp3</code> downloads the next hour's file every hour.</p>
+<p><b>Around midnight:</b> when a name carries both the date and the hour of the next hour, shift <b>both</b>: <code>BULLETIN_{date+1h:yyyyMMdd}_{date+1h:HH}.mp2</code>. At 23:57 it gives the next day's date with hour <code>00</code>; with an unshifted <code>{date:yyyyMMdd}</code> the midnight file would carry the wrong date.</p>
 <p>For tasks whose URL depends on date and time, a <b>"Run edition…"</b> menu appears: it lists the latest scheduled occurrences and lets you download a missed edition by hand, using its date and time in the file name.</p>
 """, False),
 ("Schedules", """
