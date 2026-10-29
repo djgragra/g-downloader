@@ -2,6 +2,10 @@
 
 Versions use `YY.M.N`. Newest first.
 
+## 26.10.5 — 2026-10-26
+- **Time zone and daylight saving time in file names.** `{tz}` writes the abbreviation of the zone the computer is in (`GMT`/`BST`, `CET`/`CEST`, changing by itself with daylight saving time); `{tz:lower}` and `{tz:upper}` set the case, `{tz:Europe/London}` uses a fixed zone. `{dst:bst|gmt}` writes the first text while daylight saving time is on and the second otherwise (any text; `{dst@Europe/London:bst|gmt}` for another zone). `{date@Europe/London:yyyyMMdd}` and `{time@Europe/London:HH}` give the date or time on the clock of another zone. They work in URLs, file names and actions; the buttons below the fields insert them. Thanks to Will, who asked for a file name that changes between GMT and BST.
+- **Wildcards in the file name (FTP and local or network files).** `BULLETIN_*.mp2` (and `?` for local files): at every attempt the app lists the folder and takes the newest file that matches, and the log lists the others. If the newest one is the file taken last time and unchanged, nothing new has arrived: the wait window and the retries keep trying, so yesterday's file is never saved again by mistake. With *Name from the address* the file keeps its real name. Web (HTTP/HTTPS) addresses cannot use them. Thanks to Will, who suggested it.
+
 ## 26.10.4 — 2026-10-24
 - **The macOS app now opens on Apple Silicon Macs.** The app used to leave the build with a signature that the build's own changes had invalidated, and an Apple Silicon Mac said "G-Downloader is damaged". It is now signed ad hoc (no Apple account involved) and every release checks the signature of both disk images before publishing. The first launch still shows "unidentified developer": open *System Settings → Privacy & Security* and click *Open Anyway* (right-click → Open no longer exists on macOS 15 and later). If you already installed an earlier version that says "damaged", run `xattr -cr /Applications/G-Downloader.app && codesign --force --deep -s - /Applications/G-Downloader.app` once.
 - The updates repository check now rejects names made of dots (`../x`) in the update module as well, not only in the settings.

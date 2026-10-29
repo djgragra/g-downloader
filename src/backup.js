@@ -10,7 +10,7 @@ export const BACKUP_VERSION = 1;
 export const MAX_BACKUP_BYTES = 20_000_000;
 export const MAX_TASKS = 500;
 // what a task remembers about its runs: not part of a backup
-const TASK_RUNTIME_KEYS = ['history', 'lastRun', 'lastStatus', 'lastError', 'lastFileHash', 'unchangedStreak', 'seqCounter', 'pendingActions'];
+const TASK_RUNTIME_KEYS = ['history', 'lastRun', 'lastStatus', 'lastError', 'lastFileHash', 'unchangedStreak', 'lastWildcard', 'seqCounter', 'pendingActions'];
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const dateStamp = (ms) => new Date(ms).toISOString().slice(0, 10);

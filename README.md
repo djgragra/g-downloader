@@ -6,8 +6,8 @@ By Graziano Melzi · [OnAir Garage](https://onairgarage.com) — contact: hello@
 
 ## Features
 
-- **Dynamic URLs and filenames**: `{date:yyyyMMdd}`, `{time:HHmmss}`, `{seq:4}`, `{rand:6}`, `{env:NAME}`, with date offsets.
-- **Sources**: HTTP(S) (with basic auth and POST body), FTP/FTPS, local or network files.
+- **Dynamic URLs and filenames**: `{date:yyyyMMdd}`, `{time:HHmmss}`, `{seq:4}`, `{rand:6}`, `{env:NAME}`, with date offsets and time zones: `{tz:lower}` (gmt/bst, cet/cest), `{dst:bst|gmt}` (text that depends on daylight saving time), `{time@Europe/London:HH}`.
+- **Sources**: HTTP(S) (with basic auth and POST body), FTP/FTPS, local or network files; with FTP and local files the name may contain `*` (e.g. `BULLETIN_*.mp2`): the newest matching file is taken, never the same one twice.
 - **Flexible schedules**: several independent schedules per task (weekdays + times, one-off, every N minutes/hours, cron expression), with optional start/end.
 - **Post-download actions**: run a program, move the file, open it, system notification; placeholders `{filepath}` `{filename}` `{folder}` `{taskName}`. Download and actions can also be run **separately and by hand** (*Download only*, *Actions only*, *Actions on another file…*, or a single action, with a *Preview* of the resolved commands), e.g. when a file arrived by email. Each schedule can also stop after the download, or wait for your confirmation (with an email/Telegram notice) before running the actions.
 - **Folder housekeeping**: fail-safe cleanup (files set aside and restored if the download fails), `_cestino` bin with expiry, cap on `.old-…` copies, folder size limit, a preview and a *Clean now* button.

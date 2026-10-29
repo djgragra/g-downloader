@@ -89,6 +89,30 @@ const TEXT = {
   "The given path is not a file",
   "La ruta indicada no es un archivo"
  ],
+ "I caratteri jolly (*) nel nome del file funzionano solo con indirizzi FTP e con file locali: un server web non dà l'elenco dei suoi file.": [
+  "Wildcards (*) in the file name only work with FTP addresses and local files: a web server does not give the list of its files.",
+  "Los comodines (*) en el nombre del archivo solo funcionan con direcciones FTP y archivos locales: un servidor web no da la lista de sus archivos."
+ ],
+ "Cartella non trovata: {path}": [
+  "Folder not found: {path}",
+  "Carpeta no encontrada: {path}"
+ ],
+ "Nessun file corrisponde a \"{pattern}\" in {dir}": [
+  "No file matches \"{pattern}\" in {dir}",
+  "Ningún archivo coincide con \"{pattern}\" en {dir}"
+ ],
+ "Nessun file nuovo: l'ultimo che corrisponde a \"{pattern}\" ({name}) è già stato scaricato": [
+  "No new file: the latest one that matches \"{pattern}\" ({name}) has already been downloaded",
+  "Ningún archivo nuevo: el último que coincide con \"{pattern}\" ({name}) ya se descargó"
+ ],
+ "{n} file corrispondono a \"{pattern}\": scelto il più recente ({name}); gli altri: {others}": [
+  "{n} files match \"{pattern}\": the newest was chosen ({name}); the others: {others}",
+  "{n} archivos coinciden con \"{pattern}\": se eligió el más reciente ({name}); los demás: {others}"
+ ],
+ "File scelto: {name}": [
+  "File chosen: {name}",
+  "Archivo elegido: {name}"
+ ],
  "File non trovato: {path}": [
   "File not found: {path}",
   "Archivo no encontrado: {path}"

@@ -4,7 +4,7 @@ ES = dict(manual="Manual de usuario", version="Versión", license="Licencia MIT 
 <h3>Qué puede hacer</h3>
 <ul>
 <li>Orígenes <b>web</b> (HTTP/HTTPS, con usuario y contraseña, peticiones GET o POST), <b>FTP/FTPS</b> y <b>archivos locales o de red</b>.</li>
-<li>URL y nombres de archivo <b>dinámicos</b>: fecha, hora, contador, valores aleatorios, desplazamientos (por ejemplo, «la hora siguiente»).</li>
+<li>URL y nombres de archivo <b>dinámicos</b>: fecha, hora, contador, valores aleatorios, desplazamientos (por ejemplo, «la hora siguiente»), zona horaria y horario de verano (p. ej. <code>gmt</code>/<code>bst</code> en el nombre), comodines en el nombre del archivo para FTP y archivos locales.</li>
 <li>Varias <b>programaciones</b> por tarea: días de la semana y horas, una sola vez, cada N segundos/minutos/horas/días o una expresión cron.</li>
 <li><b>Acciones</b> antes y después de la descarga: limpieza de carpetas, cambio de nombre de los archivos existentes, ejecución de programas o scripts, mover, abrir, notificaciones.</li>
 <li><b>Reintentos automáticos</b> en caso de error, <b>espera de un archivo que se publica tarde</b> (capítulo 13.1) y avisos por <b>correo electrónico</b> y <b>Telegram</b>; informe resumen periódico.</li>
@@ -81,7 +81,9 @@ ES = dict(manual="Manual de usuario", version="Versión", license="Licencia MIT 
 <p>Usa una URL como <code>ftp://servidor/carpeta/archivo.mp3</code> o <code>ftps://…</code>, con usuario y contraseña en la tarjeta de autenticación. Atención: <code>ftp://servidor/dir/archivo</code> es relativa a la carpeta de inicio de sesión; para una ruta absoluta usa una barra doble <code>ftp://servidor//dir/archivo</code>. Si no se encuentra el archivo, el registro indica en qué carpeta busca la app y qué archivos ve, de modo que se distingue de inmediato si el error está en el nombre o en la carpeta.</p>
 <h3>6.3 Archivo local o de red</h3>
 <p>Elige <i>Archivo local / de red</i> e introduce la ruta (por ejemplo, <code>D:\\Audio\\programa.mp3</code> o <code>\\\\servidor\\audio\\clip.mp3</code>). El archivo se copia a la carpeta de destino. Si todavía no está allí, se reintenta igual que con los orígenes web.</p>
-<h3>6.4 Reintentos en caso de error</h3>
+<h3>6.4 Nombre de archivo que no se conoce de antemano (comodín)</h3>
+<p>En las direcciones <b>FTP</b> y en los <b>archivos locales o de red</b> el nombre del archivo puede llevar <code>*</code> (cualquier carácter) y, en los archivos locales, <code>?</code> (un carácter), por ejemplo <code>ftp://server/news/BULLETIN_*.mp2</code> o <code>D:\\In\\BULLETIN_*.mp2</code>. En cada intento la aplicación lee la carpeta y toma el archivo <b>más reciente</b> que coincide (por fecha de modificación y después por nombre). Si coinciden varios, el registro enumera los demás. Si el más reciente es el archivo tomado la vez anterior y no ha cambiado, <b>no ha llegado nada nuevo</b>: cuenta como «aún no disponible» (la ventana de espera y los reintentos siguen), así el archivo de ayer nunca se guarda de nuevo por error. Con <i>Nombre desde la dirección</i> el archivo conserva su nombre real. Solo el nombre del archivo puede llevar comodines, nunca la carpeta. Las direcciones web (HTTP/HTTPS) no pueden: un servidor web no da la lista de sus archivos.</p>
+<h3>6.5 Reintentos en caso de error</h3>
 <p>Para cada tarea puedes fijar cuántos <b>intentos</b> hacer (por defecto 3) y cuánto <b>esperar</b> entre ellos (por defecto 15 segundos). Los valores por defecto de las tareas nuevas se cambian en Ajustes. Si el último intento también falla, la tarea se marca como fallida y, si está activado, se envía el aviso por correo o Telegram.</p>
 """, False),
 ("Marcadores dinámicos", """
@@ -91,11 +93,15 @@ ES = dict(manual="Manual de usuario", version="Versión", license="Licencia MIT 
 <tr><td><code>{date:yyyy-MM-dd}</code></td><td>fecha ISO, p. ej. <code>2026-09-26</code></td></tr>
 <tr><td><code>{time:HHmmss}</code></td><td>hora actual, p. ej. <code>084500</code></td></tr>
 <tr><td><code>{date+1h:H}</code></td><td>fecha/hora <b>desplazada</b>: aquí la hora siguiente (p. ej. 7 a las 6:57). También <code>-1d</code>, <code>+30m</code>, etc.</td></tr>
+<tr><td><code>{tz:lower}</code></td><td>abreviatura de la zona horaria del ordenador, p. ej. <code>gmt</code>/<code>bst</code> o <code>cet</code>/<code>cest</code> (cambia con el horario de verano). <code>{tz}</code> mantiene las mayúsculas; <code>{tz:Europe/London:upper}</code> usa una zona fija (cualquier nombre IANA)</td></tr>
+<tr><td><code>{dst:bst|gmt}</code></td><td>el <b>primer</b> texto con el horario de verano, el <b>segundo</b> en caso contrario (texto libre; para otra zona: <code>{dst@Europe/London:bst|gmt}</code>)</td></tr>
+<tr><td><code>{time@Europe/London:HH}</code></td><td>fecha u hora como reloj de <b>otra zona</b>: <code>{date@…:…}</code> y <code>{time@…:…}</code></td></tr>
 <tr><td><code>{seq:4}</code></td><td>contador progresivo por tarea (<code>0001</code>, <code>0002</code>, …)</td></tr>
 <tr><td><code>{rand:6}</code></td><td>cadena aleatoria de 6 caracteres</td></tr>
 <tr><td><code>{env:NOMBRE}</code></td><td>valor de una variable de entorno</td></tr></table>
 <p>El formato tras los dos puntos usa las letras habituales: <code>yyyy</code> año, <code>MM</code> mes, <code>dd</code> día, <code>HH</code> horas (00–23), <code>mm</code> minutos, <code>ss</code> segundos.</p>
 <p><b>Ejemplo:</b> <code>https://example.com/audio/programa_{date:yyyyMMdd}_{date+1h:HH}.mp3</code> descarga cada hora el archivo de la hora siguiente.</p>
+<p><b>Cerca de medianoche:</b> si el nombre lleva la fecha y la hora siguiente, desplaza <b>ambas</b>: <code>BULLETIN_{date+1h:yyyyMMdd}_{date+1h:HH}.mp2</code>. A las 23:57 da la fecha del día siguiente con hora <code>00</code>; con <code>{date:yyyyMMdd}</code> sin desplazar, el archivo de medianoche tendría la fecha equivocada.</p>
 <p>Para las tareas cuya URL depende de la fecha y la hora aparece un menú <b>«Ejecutar edición…»</b>: enumera las últimas apariciones programadas y permite descargar a mano una edición perdida, usando su fecha y hora en el nombre del archivo.</p>
 """, False),
 ("Programaciones", """
@@ -317,6 +323,7 @@ ES = dict(manual="Manual de usuario", version="Versión", license="Licencia MIT 
 <tr><td>Linux: el AppImage no se inicia</td><td>Hazlo ejecutable (<code>chmod +x</code>) e instala FUSE (<code>libfuse2</code>) si hace falta.</td></tr>
 <tr><td>La descarga no empieza a la hora programada</td><td>Comprueba que la app está en marcha (icono de la bandeja), que la tarea y la programación están activadas, y mira la <i>Vista previa</i> y la consola. Activa el aviso de programaciones omitidas.</td></tr>
 <tr><td>Error 401/403 del servidor</td><td>Comprueba el usuario y la contraseña en la tarjeta Origen.</td></tr>
+<tr><td>«Ningún archivo nuevo: el último que coincide…»</td><td>Un nombre con <code>*</code> solo encontró el archivo tomado la vez anterior: el nuevo aún no se ha publicado. No hay nada que corregir: la ventana de espera y los reintentos siguen. «Ningún archivo coincide» significa que la carpeta no contiene nada con ese patrón: revisa el patrón y la carpeta.</td></tr>
 <tr><td>FTP: «550 file not found»</td><td>Lee el mensaje: muestra la carpeta de inicio de sesión y los archivos presentes; corrige la ruta o espera a que se publique el archivo. Recuerda la barra doble para las rutas absolutas.</td></tr>
 <tr><td>El archivo descargado es una página de error, o el archivo se publica tarde</td><td>Activa «Esperando el archivo» en la tarea (capítulo 13.1): los archivos vacíos, los demasiado pequeños y las páginas web se reintentan hasta que termina la ventana. O activa «Comprobar que el archivo descargado no sea demasiado pequeño» en Ajustes.</td></tr>
 <tr><td>Una descarga no se ejecutó en un festivo</td><td>Mira las <i>Excepciones de calendario</i> de la tarea (capítulo 8.6) y la nota <i>omitido (excepción)</i> en la actividad reciente.</td></tr>

@@ -190,7 +190,7 @@ const GUIDE_CONTENT = {
       },
       {
         h: 'Placeholder dinamici',
-        p: 'In URL, percorso file e nome file puoi usare: <code>{date:yyyyMMdd}</code> (data), <code>{time:HHmmss}</code> (ora), <code>{seq:4}</code> (contatore progressivo), <code>{rand:6}</code> (stringa casuale), <code>{date+1h:H}</code> (data/ora spostata: qui l\'ora successiva; anche <code>-1d</code>, <code>+30m</code>). Utile per file che cambiano nome ogni giorno.'
+        p: 'In URL, percorso file e nome file puoi usare: <code>{date:yyyyMMdd}</code> (data), <code>{time:HHmmss}</code> (ora), <code>{seq:4}</code> (contatore progressivo), <code>{rand:6}</code> (stringa casuale), <code>{date+1h:H}</code> (data/ora spostata: qui l\'ora successiva; anche <code>-1d</code>, <code>+30m</code>). Per i file con il fuso orario nel nome: <code>{tz:lower}</code> (abbreviazione del fuso del PC, es. gmt/bst o cet/cest; <code>{tz:Europe/London:upper}</code> per un fuso fisso), <code>{dst:bst|gmt}</code> (il primo testo con l\'ora legale, il secondo senza) e <code>{time@Europe/London:HH}</code> (l\'ora di un altro fuso). Utile per file che cambiano nome ogni giorno. Se il nome non è prevedibile, con FTP e file locali puoi usare <code>*</code> (es. <code>BULLETIN_*.mp2</code>): l\'app prende il file più recente che corrisponde e non riscarica mai lo stesso due volte.'
       },
       {
         h: 'Pianificazioni',
@@ -260,7 +260,7 @@ const GUIDE_CONTENT = {
       },
       {
         h: 'Dynamic placeholders',
-        p: 'In the URL, local path and filename you can use: <code>{date:yyyyMMdd}</code> (date), <code>{time:HHmmss}</code> (time), <code>{seq:4}</code> (running counter), <code>{rand:6}</code> (random string), <code>{date+1h:H}</code> (shifted date/time: here the next hour; also <code>-1d</code>, <code>+30m</code>). Handy for files whose name changes every day.'
+        p: 'In the URL, local path and filename you can use: <code>{date:yyyyMMdd}</code> (date), <code>{time:HHmmss}</code> (time), <code>{seq:4}</code> (running counter), <code>{rand:6}</code> (random string), <code>{date+1h:H}</code> (shifted date/time: here the next hour; also <code>-1d</code>, <code>+30m</code>). For file names that carry the time zone: <code>{tz:lower}</code> (abbreviation of the PC\'s zone, e.g. gmt/bst or cet/cest; <code>{tz:Europe/London:upper}</code> for a fixed zone), <code>{dst:bst|gmt}</code> (the first text while daylight saving time is on, the second otherwise) and <code>{time@Europe/London:HH}</code> (the time of another zone). Handy for files whose name changes every day. When the name cannot be predicted, with FTP and local files you can use <code>*</code> (e.g. <code>BULLETIN_*.mp2</code>): the app takes the newest matching file and never saves the same one twice.'
       },
       {
         h: 'Schedules',
@@ -330,7 +330,7 @@ const GUIDE_CONTENT = {
       },
       {
         h: 'Marcadores dinámicos',
-        p: 'En la URL, la ruta local y el nombre de archivo puedes usar: <code>{date:yyyyMMdd}</code> (fecha), <code>{time:HHmmss}</code> (hora), <code>{seq:4}</code> (contador), <code>{rand:6}</code> (texto aleatorio), <code>{date+1h:H}</code> (fecha/hora desplazada: aquí la hora siguiente; también <code>-1d</code>, <code>+30m</code>). Útil para archivos que cambian de nombre cada día.'
+        p: 'En la URL, la ruta local y el nombre de archivo puedes usar: <code>{date:yyyyMMdd}</code> (fecha), <code>{time:HHmmss}</code> (hora), <code>{seq:4}</code> (contador), <code>{rand:6}</code> (texto aleatorio), <code>{date+1h:H}</code> (fecha/hora desplazada: aquí la hora siguiente; también <code>-1d</code>, <code>+30m</code>). Para archivos con la zona horaria en el nombre: <code>{tz:lower}</code> (abreviatura de la zona del PC, p. ej. gmt/bst o cet/cest; <code>{tz:Europe/London:upper}</code> para una zona fija), <code>{dst:bst|gmt}</code> (el primer texto con el horario de verano, el segundo sin él) y <code>{time@Europe/London:HH}</code> (la hora de otra zona). Útil para archivos que cambian de nombre cada día. Si el nombre no se puede prever, con FTP y archivos locales puedes usar <code>*</code> (p. ej. <code>BULLETIN_*.mp2</code>): la aplicación toma el archivo más reciente que coincide y nunca guarda el mismo dos veces.'
       },
       {
         h: 'Programaciones',

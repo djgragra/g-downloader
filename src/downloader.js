@@ -14,6 +14,7 @@ import { notifier } from './services.js';
 import { waitWindowOf, checkArrived, retryWithin, waitStable, WaitExpired } from './waitwindow.js';
 import { httpFetch } from './httpfetch.js';
 import { M } from './i18n.js';
+import { wildcardSource, pickMatch, sameAsBefore, ftpUrlWithName } from './wildcard.js';
 
 export const events = new EventEmitter();
 
@@ -171,7 +172,7 @@ async function downloadWithRetries(taskId, url, tempPath, http, minBytes) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       if (attempt > 0) log(taskId, M("Nuovo tentativo {attempt}/{retries}...", { attempt: attempt, retries: retries }));
-      const result = await downloadOnce(taskId, url, tempPath, http);
+      const result = await downloadOnce(taskId, typeof url === 'function' ? await url() : url, tempPath, http);
       if (minBytes > 0 && result.bytes < minBytes) {
         throw new Error(M("File troppo piccolo ({bytes} byte, minimo richiesto {min})", { bytes: result.bytes, min: minBytes }));
       }
@@ -239,7 +240,7 @@ async function copyLocalWithRetries(taskId, sourcePath, tempPath, http) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       if (attempt > 0) log(taskId, M("File non ancora disponibile, nuovo tentativo {attempt}/{retries}...", { attempt: attempt, retries: retries }));
-      return await copyLocalOnce(sourcePath, tempPath);
+      return await copyLocalOnce(typeof sourcePath === 'function' ? await sourcePath() : sourcePath, tempPath);
     } catch (err) {
       lastError = err;
       log(taskId, M("Tentativo {attempt} fallito: {message}", { attempt: attempt + 1, message: lastError.message }), 'warn');
@@ -247,6 +248,66 @@ async function copyLocalWithRetries(taskId, sourcePath, tempPath, http) {
     }
   }
   throw lastError;
+}
+
+// A name with * (FTP) or * and ? (local file): list the folder and take the newest file that matches. If it is
+// the one taken last time and it has not changed, nothing new has arrived: that counts as "not there yet", so the
+// wait window and the retries keep trying instead of saving yesterday's file again.
+async function listFtpFiles(url, dir, http) {
+  const client = new FtpClient(http.timeoutMs || 30000);
+  try {
+    await client.access({
+      host: url.hostname,
+      port: url.port ? Number(url.port) : undefined,
+      user: http.auth?.enabled && http.auth.username ? http.auth.username : 'anonymous',
+      password: http.auth?.enabled ? http.auth.password || '' : 'anonymous@',
+      secure: url.protocol === 'ftps:'
+    });
+    const rel = dir.startsWith('//') ? dir.slice(1) : dir.replace(/^\//, '');
+    let list;
+    try {
+      list = await client.list(rel || undefined);
+    } catch (err) {
+      if (err.code !== 550 || rel.startsWith('/')) throw err;
+      list = await client.list('/' + rel); // same fallback as the download: relative first, then from the root
+    }
+    return list.filter((f) => f.isFile).map((f) => ({ name: f.name, size: f.size, mtimeMs: f.modifiedAt ? f.modifiedAt.getTime() : 0 }));
+  } finally {
+    client.close();
+  }
+}
+
+async function listLocalFiles(dir) {
+  const out = [];
+  for (const e of await fsp.readdir(dir, { withFileTypes: true })) {
+    if (!e.isFile() || isInternalName(e.name)) continue;
+    const st = await fsp.stat(path.join(dir, e.name)).catch(() => null);
+    if (st) out.push({ name: e.name, size: st.size, mtimeMs: st.mtimeMs });
+  }
+  return out;
+}
+
+// Returns { source, name, chosen } for a wildcard source, or null when the name is ordinary.
+async function resolveWildcard(taskId, task, source, isLocal, http) {
+  const w = wildcardSource(source, isLocal);
+  if (!w) return null;
+  if (w.kind === 'http') throw new Error(M("I caratteri jolly (*) nel nome del file funzionano solo con indirizzi FTP e con file locali: un server web non dà l'elenco dei suoi file."));
+  let candidates;
+  try {
+    candidates = w.kind === 'ftp' ? await listFtpFiles(w.url, w.dir, http) : await listLocalFiles(w.dir);
+  } catch (err) {
+    throw err.code === 'ENOENT' ? new Error(M("Cartella non trovata: {path}", { path: w.dir })) : err;
+  }
+  const match = pickMatch(candidates, w.pattern);
+  if (!match) throw new Error(M("Nessun file corrisponde a \"{pattern}\" in {dir}", { pattern: w.pattern, dir: w.dir }));
+  if (sameAsBefore(getTask(taskId)?.lastWildcard, match.chosen)) {
+    throw new Error(M("Nessun file nuovo: l'ultimo che corrisponde a \"{pattern}\" ({name}) è già stato scaricato", { pattern: w.pattern, name: match.chosen.name }));
+  }
+  if (match.others.length) {
+    log(taskId, M("{n} file corrispondono a \"{pattern}\": scelto il più recente ({name}); gli altri: {others}", { n: match.others.length + 1, pattern: w.pattern, name: match.chosen.name, others: match.others.slice(0, 5).map((o) => o.name).join(', ') }), 'warn');
+  }
+  const name = match.chosen.name;
+  return { name, chosen: match.chosen, source: w.kind === 'ftp' ? ftpUrlWithName(w.url, w.dir, name) : path.join(w.dir, name) };
 }
 
 async function moveOrCopy(from, to) {
@@ -695,6 +756,8 @@ function expectedFileName(task, ctx0) {
   if (task.filenameMode === 'fixed') return resolveTemplate(task.fixedFilename, ctx0);
   if (task.filenameMode === 'template') return resolveTemplate(task.filenameTemplate, ctx0);
   if (task.filenameMode === 'fromUrl') {
+    const raw = task.sourceType === 'local' ? resolveTemplate(task.localPath, ctx0) : resolveTemplate(task.url, ctx0);
+    if (wildcardSource(raw, task.sourceType === 'local')) return null; // known only after listing the folder
     return safeFileName(
       task.sourceType === 'local'
         ? path.basename(cleanPath(resolveTemplate(task.localPath, ctx0)))
@@ -834,7 +897,7 @@ async function runTaskInner(taskId, opts = {}) {
     await fsp.mkdir(destFolder, { recursive: true });
     let filename;
     if (task.filenameMode === 'fixed') filename = resolveTemplate(task.fixedFilename, ctx0);
-    else if (task.filenameMode === 'fromUrl') filename = safeFileName(isLocal ? path.basename(resolvedUrl) : filenameFromUrl(resolvedUrl));
+    else if (task.filenameMode === 'fromUrl') filename = safeFileName((isLocal ? path.basename(resolvedUrl) : filenameFromUrl(resolvedUrl)).replace(/[*?]/g, '_')); // a wildcard name is replaced by the real one once the folder is listed
     else filename = resolveTemplate(task.filenameTemplate, ctx0); // 'template' and 'ask' both download under a resolved name first
 
     // Whatever produced the name, the file must end up inside the destination folder.
@@ -857,6 +920,14 @@ async function runTaskInner(taskId, opts = {}) {
       httpConfig.resolvedBody = resolveTemplate(httpConfig.body, ctx0);
     }
 
+    // a wildcard name is resolved at every attempt, so a file that shows up later is found by the wait window / retries
+    let resolved = null;
+    const getSource = async () => {
+      const r = await resolveWildcard(taskId, task, resolvedUrl, isLocal, httpConfig);
+      if (r) resolved = r;
+      return r ? r.source : resolvedUrl;
+    };
+
     const globalMinKB = settings.checkMinFileSize ? Math.max(0, Number(settings.minFileSizeKB) || 0) : 0;
     const minBytes = globalMinKB * 1024;
     const ww = waitWindowOf(task, globalMinKB);
@@ -867,14 +938,19 @@ async function runTaskInner(taskId, opts = {}) {
           ww,
           async () => {
             await fsp.rm(tempPath, { force: true });
-            return isLocal ? copyLocalOnce(resolvedUrl, tempPath, ww) : downloadOnce(taskId, resolvedUrl, tempPath, httpConfig);
+            const source = await getSource();
+            return isLocal ? copyLocalOnce(source, tempPath, ww) : downloadOnce(taskId, source, tempPath, httpConfig);
           },
           filename
         )
       : isLocal
-        ? await copyLocalWithRetries(taskId, resolvedUrl, tempPath, httpConfig)
-        : await downloadWithRetries(taskId, resolvedUrl, tempPath, httpConfig, minBytes);
+        ? await copyLocalWithRetries(taskId, getSource, tempPath, httpConfig)
+        : await downloadWithRetries(taskId, getSource, tempPath, httpConfig, minBytes);
     emitLog(M("Download completato ({bytes} byte).", { bytes: bytes }));
+    if (resolved) {
+      emitLog(M("File scelto: {name}", { name: resolved.name }));
+      if (task.filenameMode === 'fromUrl') filename = safeFileName(resolved.name);
+    }
 
     const expected = String(task.expectedSha256 || '').trim().toLowerCase();
     if (expected) {
@@ -899,6 +975,10 @@ async function runTaskInner(taskId, opts = {}) {
       finalPath = await finalizePath(destFolder, tempPath, filename, emitLog, task.existingFile === 'overwrite');
     }
     emitLog(M("File salvato: {path}", { path: finalPath }));
+    if (resolved) {
+      task.lastWildcard = resolved.chosen; // the next run takes a newer file, not this one again
+      saveTask(task);
+    }
     if (staged) {
       const s = staged;
       staged = null; // the download is saved: from here on nothing is restored
@@ -958,7 +1038,7 @@ async function runTaskInner(taskId, opts = {}) {
       finishedAt: new Date().toISOString(),
       status: 'success',
       ...(after === 'none' ? { mode: 'download' } : after === 'wait' ? { mode: 'download', waiting: true } : {}),
-      url: resolvedUrl,
+      url: resolved?.source || resolvedUrl,
       filepath: finalPath,
       bytes
     });

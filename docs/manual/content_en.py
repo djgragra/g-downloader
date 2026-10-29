@@ -4,7 +4,7 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <h3>What it can do</h3>
 <ul>
 <li><b>Web</b> sources (HTTP/HTTPS, with username and password, GET or POST requests), <b>FTP/FTPS</b> and <b>local or network files</b>.</li>
-<li><b>Dynamic</b> URLs and file names: date, time, counter, random values, offsets (e.g. "the next hour").</li>
+<li><b>Dynamic</b> URLs and file names: date, time, counter, random values, offsets (e.g. "the next hour"), time zone and daylight saving time (e.g. <code>gmt</code>/<code>bst</code> in the name), wildcards in the file name for FTP and local files.</li>
 <li>Several <b>schedules</b> per task: weekdays and times, one-off, every N seconds/minutes/hours/days, or a cron expression.</li>
 <li><b>Actions</b> before and after the download: folder cleanup, renaming of existing files, running programs or scripts, moving, opening, notifications.</li>
 <li><b>Automatic retries</b> on error, <b>waiting for a file that is published late</b> (chapter 13.1) and alerts by <b>email</b> and <b>Telegram</b>; periodic summary report.</li>
@@ -81,7 +81,9 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <p>Use a URL like <code>ftp://server/folder/file.mp3</code> or <code>ftps://…</code>, with username and password in the authentication card. Note: <code>ftp://server/dir/file</code> is relative to the login folder; for an absolute path use a double slash <code>ftp://server//dir/file</code>. If the file is not found, the log tells you which folder the app is looking in and which files it sees, so you can immediately tell whether the name or the folder is wrong.</p>
 <h3>6.3 Local or network file</h3>
 <p>Choose <i>Local / network file</i> and enter the path (e.g. <code>D:\\Audio\\show.mp3</code> or <code>\\\\server\\audio\\clip.mp3</code>). The file is copied to the destination folder. If it is not there yet, attempts are retried just as for web sources.</p>
-<h3>6.4 Retries on error</h3>
+<h3>6.4 A file name that is not known in advance (wildcard)</h3>
+<p>For <b>FTP</b> addresses and <b>local or network files</b> the file name may contain <code>*</code> (any characters) and, for local files, <code>?</code> (one character), e.g. <code>ftp://server/news/BULLETIN_*.mp2</code> or <code>D:\\In\\BULLETIN_*.mp2</code>. At every attempt the app lists the folder and takes the <b>newest</b> file that matches (by modification time, then by name). If several files match, the log lists the others. If the newest one is the file taken last time and has not changed, <b>nothing new has arrived</b>: it counts as "not there yet" (the wait window and the retries keep trying), so yesterday's file is never saved again by mistake. With <i>Name from the address</i> the file keeps its real name. Only the file name can have wildcards, never the folder. Web (HTTP/HTTPS) addresses cannot: a web server gives no list of its files.</p>
+<h3>6.5 Retries on error</h3>
 <p>For each task you can set how many <b>attempts</b> to make (default 3) and how long to <b>wait</b> between them (default 15 seconds). The defaults for new tasks are changed in Settings. If the last attempt fails too, the task is marked as failed and, if enabled, the email/Telegram alert is sent.</p>
 """, False),
 ("Dynamic placeholders", """
@@ -91,11 +93,15 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <tr><td><code>{date:yyyy-MM-dd}</code></td><td>ISO date, e.g. <code>2026-09-26</code></td></tr>
 <tr><td><code>{time:HHmmss}</code></td><td>current time, e.g. <code>084500</code></td></tr>
 <tr><td><code>{date+1h:H}</code></td><td><b>shifted</b> date/time: here the next hour (e.g. 7 at 6:57). Also <code>-1d</code>, <code>+30m</code>, etc.</td></tr>
+<tr><td><code>{tz:lower}</code></td><td>abbreviation of the time zone of this computer, e.g. <code>gmt</code>/<code>bst</code> or <code>cet</code>/<code>cest</code> (changes with daylight saving time). <code>{tz}</code> keeps the capitals; <code>{tz:Europe/London:upper}</code> uses a fixed zone (any IANA name)</td></tr>
+<tr><td><code>{dst:bst|gmt}</code></td><td>the <b>first</b> text while daylight saving time is on, the <b>second</b> otherwise (any text; for another zone: <code>{dst@Europe/London:bst|gmt}</code>)</td></tr>
+<tr><td><code>{time@Europe/London:HH}</code></td><td>date or time as the wall clock of <b>another zone</b>: <code>{date@…:…}</code> and <code>{time@…:…}</code></td></tr>
 <tr><td><code>{seq:4}</code></td><td>running counter per task (<code>0001</code>, <code>0002</code>, …)</td></tr>
 <tr><td><code>{rand:6}</code></td><td>random string of 6 characters</td></tr>
 <tr><td><code>{env:NAME}</code></td><td>value of an environment variable</td></tr></table>
 <p>The format after the colon uses the standard letters: <code>yyyy</code> year, <code>MM</code> month, <code>dd</code> day, <code>HH</code> hours (00–23), <code>mm</code> minutes, <code>ss</code> seconds.</p>
 <p><b>Example:</b> <code>https://example.com/audio/show_{date:yyyyMMdd}_{date+1h:HH}.mp3</code> downloads the next hour's file every hour.</p>
+<p><b>Around midnight:</b> when a name carries both the date and the hour of the next hour, shift <b>both</b>: <code>BULLETIN_{date+1h:yyyyMMdd}_{date+1h:HH}.mp2</code>. At 23:57 it gives the next day's date with hour <code>00</code>; with an unshifted <code>{date:yyyyMMdd}</code> the midnight file would carry the wrong date.</p>
 <p>For tasks whose URL depends on date and time, a <b>"Run edition…"</b> menu appears: it lists the latest scheduled occurrences and lets you download a missed edition by hand, using its date and time in the file name.</p>
 """, False),
 ("Schedules", """
@@ -317,6 +323,7 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <tr><td>Linux: the AppImage does not start</td><td>Make it executable (<code>chmod +x</code>) and install FUSE (<code>libfuse2</code>) if required.</td></tr>
 <tr><td>The download does not start at the scheduled time</td><td>Check that the app is running (tray icon), that the task and schedule are enabled, and look at <i>Preview</i> and the console. Turn on the missed-schedules alert.</td></tr>
 <tr><td>401/403 error from the server</td><td>Check the username and password in the Source card.</td></tr>
+<tr><td>"No new file: the latest one that matches…"</td><td>A name with <code>*</code> found only the file taken last time: the new one has not been published yet. Nothing to fix: the wait window and the retries keep trying. "No file matches" means the folder holds nothing with that pattern: check the pattern and the folder.</td></tr>
 <tr><td>FTP: "550 file not found"</td><td>Read the message: it shows the login folder and the files present; fix the path or wait for the file to be published. Remember the double slash for absolute paths.</td></tr>
 <tr><td>The downloaded file is an error page, or the file is published late</td><td>Turn on "Waiting for the file" in the task (chapter 13.1): empty files, too small ones and web pages are tried again until the window is over. Or turn on "Check that the downloaded file isn't too small" in Settings.</td></tr>
 <tr><td>A download did not run on a holiday</td><td>Look at the <i>Calendar exceptions</i> of the task (chapter 8.6) and at the <i>skipped (exception)</i> note in the recent activity.</td></tr>
