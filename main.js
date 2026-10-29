@@ -358,7 +358,7 @@ ipcMain.handle('tasks:new-template', () => newTaskTemplate());
 ipcMain.handle('tasks:save', (_e, task) => {
   const existing = getTask(task.id);
   if (existing) {
-    for (const k of ['history', 'lastRun', 'lastStatus', 'lastError', 'lastFileHash', 'seqCounter', 'pendingActions']) {
+    for (const k of ['history', 'lastRun', 'lastStatus', 'lastError', 'lastFileHash', 'lastWildcard', 'seqCounter', 'pendingActions']) {
       if (existing[k] === undefined) delete task[k];
       else task[k] = existing[k];
     }

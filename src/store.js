@@ -217,6 +217,7 @@ export function newTaskTemplate() {
     lastError: null,
     lastFileHash: null, // sha256 of the last successful download, used for the "file invariato" warning
     unchangedStreak: 0, // consecutive downloads identical to the previous one
+    lastWildcard: null, // the file a wildcard name picked last time ({ name, size, mtimeMs }): the same file again is not new
     expectedSha256: '', // optional: the download fails if its sha256 differs
     history: [] // recent run log entries, capped
   };

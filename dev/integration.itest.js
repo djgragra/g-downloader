@@ -75,6 +75,32 @@ test('a plain download works and is saved in the folder', async () => {
   store.deleteTask(t.id);
 });
 
+test('a wildcard file name: the newest match is taken; the same file again is "nothing new" until a newer one arrives', async () => {
+  const src = fs.mkdtempSync(path.join(os.tmpdir(), 'gd-src-'));
+  const put = (name, sec) => { const f = path.join(src, name); fs.writeFileSync(f, 'x'.repeat(100 + sec)); fs.utimesSync(f, sec, sec); };
+  put('BULLETIN_20261029_23.mp2', 1000);
+  put('BULLETIN_20261030_00.mp2', 2000);
+  put('other.mp3', 3000);
+  const t = newTask({ sourceType: 'local', localPath: path.join(src, 'BULLETIN_*.mp2'), filenameMode: 'fromUrl' });
+  store.saveTask(t);
+  const r1 = await runTaskNow(t.id);
+  assert.equal(r1.status, 'success');
+  assert.ok(fs.existsSync(path.join(dest, 'BULLETIN_20261030_00.mp2')));
+  assert.ok(!fs.existsSync(path.join(dest, 'BULLETIN_*.mp2')));
+  await assert.rejects(runTaskNow(t.id), /Nessun file nuovo|No new file|Ningún archivo nuevo/); // yesterday's file is not taken again
+  put('BULLETIN_20261030_01.mp2', 4000);
+  const r2 = await runTaskNow(t.id);
+  assert.equal(r2.status, 'success');
+  assert.ok(fs.existsSync(path.join(dest, 'BULLETIN_20261030_01.mp2')));
+  const empty = newTask({ sourceType: 'local', localPath: path.join(src, 'nothing_*.mp3'), filenameMode: 'fromUrl' });
+  store.saveTask(empty);
+  await assert.rejects(runTaskNow(empty.id), /Nessun file corrisponde|No file matches/);
+  const web = newTask({ url: `${base}/BULLETIN_*.mp2`, filenameMode: 'fromUrl' });
+  store.saveTask(web);
+  await assert.rejects(runTaskNow(web.id), /FTP|jolly|wildcard/i);
+  for (const x of [t, empty, web]) store.deleteTask(x.id);
+});
+
 test('waiting for a file that is published late: tries again until it arrives', async () => {
   mode = 'late';
   hits = 0;
