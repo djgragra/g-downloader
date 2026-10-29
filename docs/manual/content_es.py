@@ -4,7 +4,7 @@ ES = dict(manual="Manual de usuario", version="Versión", license="Licencia MIT 
 <h3>Qué puede hacer</h3>
 <ul>
 <li>Orígenes <b>web</b> (HTTP/HTTPS, con usuario y contraseña, peticiones GET o POST), <b>FTP/FTPS</b> y <b>archivos locales o de red</b>.</li>
-<li>URL y nombres de archivo <b>dinámicos</b>: fecha, hora, contador, valores aleatorios, desplazamientos (por ejemplo, «la hora siguiente»).</li>
+<li>URL y nombres de archivo <b>dinámicos</b>: fecha, hora, contador, valores aleatorios, desplazamientos (por ejemplo, «la hora siguiente»), zona horaria y horario de verano (p. ej. <code>gmt</code>/<code>bst</code> en el nombre), comodines en el nombre del archivo para FTP y archivos locales.</li>
 <li>Varias <b>programaciones</b> por tarea: días de la semana y horas, una sola vez, cada N segundos/minutos/horas/días o una expresión cron.</li>
 <li><b>Acciones</b> antes y después de la descarga: limpieza de carpetas, cambio de nombre de los archivos existentes, ejecución de programas o scripts, mover, abrir, notificaciones.</li>
 <li><b>Reintentos automáticos</b> en caso de error, <b>espera de un archivo que se publica tarde</b> (capítulo 13.1) y avisos por <b>correo electrónico</b> y <b>Telegram</b>; informe resumen periódico.</li>
@@ -323,6 +323,7 @@ ES = dict(manual="Manual de usuario", version="Versión", license="Licencia MIT 
 <tr><td>Linux: el AppImage no se inicia</td><td>Hazlo ejecutable (<code>chmod +x</code>) e instala FUSE (<code>libfuse2</code>) si hace falta.</td></tr>
 <tr><td>La descarga no empieza a la hora programada</td><td>Comprueba que la app está en marcha (icono de la bandeja), que la tarea y la programación están activadas, y mira la <i>Vista previa</i> y la consola. Activa el aviso de programaciones omitidas.</td></tr>
 <tr><td>Error 401/403 del servidor</td><td>Comprueba el usuario y la contraseña en la tarjeta Origen.</td></tr>
+<tr><td>«Ningún archivo nuevo: el último que coincide…»</td><td>Un nombre con <code>*</code> solo encontró el archivo tomado la vez anterior: el nuevo aún no se ha publicado. No hay nada que corregir: la ventana de espera y los reintentos siguen. «Ningún archivo coincide» significa que la carpeta no contiene nada con ese patrón: revisa el patrón y la carpeta.</td></tr>
 <tr><td>FTP: «550 file not found»</td><td>Lee el mensaje: muestra la carpeta de inicio de sesión y los archivos presentes; corrige la ruta o espera a que se publique el archivo. Recuerda la barra doble para las rutas absolutas.</td></tr>
 <tr><td>El archivo descargado es una página de error, o el archivo se publica tarde</td><td>Activa «Esperando el archivo» en la tarea (capítulo 13.1): los archivos vacíos, los demasiado pequeños y las páginas web se reintentan hasta que termina la ventana. O activa «Comprobar que el archivo descargado no sea demasiado pequeño» en Ajustes.</td></tr>
 <tr><td>Una descarga no se ejecutó en un festivo</td><td>Mira las <i>Excepciones de calendario</i> de la tarea (capítulo 8.6) y la nota <i>omitido (excepción)</i> en la actividad reciente.</td></tr>

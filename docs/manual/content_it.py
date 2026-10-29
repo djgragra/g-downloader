@@ -4,7 +4,7 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <h3>Cosa sa fare</h3>
 <ul>
 <li>Sorgenti <b>web</b> (HTTP/HTTPS, con utente e password e richieste GET o POST), <b>FTP/FTPS</b> e <b>file locali o di rete</b>.</li>
-<li>URL e nomi file <b>dinamici</b>: data, ora, contatore, valori casuali, scostamenti (es. «l'ora successiva»).</li>
+<li>URL e nomi file <b>dinamici</b>: data, ora, contatore, valori casuali, scostamenti (es. «l'ora successiva»), fuso orario e ora legale (es. <code>gmt</code>/<code>bst</code> nel nome), jolly nel nome del file per FTP e file locali.</li>
 <li>Più <b>pianificazioni</b> per ogni task: giorni della settimana e orari, una tantum, ogni N secondi/minuti/ore/giorni, oppure espressione cron.</li>
 <li><b>Azioni</b> prima e dopo il download: pulizia della cartella, rinomina dei file preesistenti, esecuzione di programmi o script, spostamento, apertura, notifiche.</li>
 <li><b>Tentativi automatici</b> in caso di errore, <b>attesa di un file pubblicato in ritardo</b> (capitolo 13.1) e avvisi via <b>email</b> e <b>Telegram</b>; report riepilogativo periodico.</li>
@@ -323,6 +323,7 @@ IT = dict(manual="Manuale d'uso", version="Versione", license="Licenza MIT © 20
 <tr><td>Linux: l'AppImage non parte</td><td>Rendilo eseguibile (<code>chmod +x</code>) e installa FUSE (<code>libfuse2</code>) se richiesto.</td></tr>
 <tr><td>Il download non parte all'ora prevista</td><td>Controlla che l'app sia in esecuzione (icona nella barra di sistema), che il task e la pianificazione siano attivi e guarda <i>Anteprima</i> e la console. Attiva l'avviso sulle pianificazioni saltate.</td></tr>
 <tr><td>Errore 401/403 dal server</td><td>Controlla utente e password nella scheda Sorgente.</td></tr>
+<tr><td>«Nessun file nuovo: l'ultimo che corrisponde…»</td><td>Un nome con <code>*</code> ha trovato solo il file preso l'ultima volta: quello nuovo non è ancora stato pubblicato. Non c'è niente da correggere: la finestra di attesa e i tentativi continuano. «Nessun file corrisponde» significa che la cartella non contiene niente con quel modello: controlla il modello e la cartella.</td></tr>
 <tr><td>FTP: «550 file non trovato»</td><td>Leggi il messaggio: indica la cartella di accesso e i file presenti; correggi il percorso o attendi che il file sia pubblicato. Ricorda la doppia barra per i percorsi assoluti.</td></tr>
 <tr><td>Il file scaricato è una pagina di errore, o il file è pubblicato in ritardo</td><td>Attiva «Attesa del file» nel task (capitolo 13.1): file vuoti, troppo piccoli e pagine web vengono ritentati finché la finestra non finisce. Oppure attiva «Verifica che il file non sia troppo piccolo» nelle Impostazioni.</td></tr>
 <tr><td>Un download non è partito in un giorno festivo</td><td>Guarda le <i>Eccezioni di calendario</i> del task (capitolo 8.6) e la nota <i>saltato (eccezione)</i> nell'attività recente.</td></tr>

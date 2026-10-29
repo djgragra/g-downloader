@@ -4,7 +4,7 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <h3>What it can do</h3>
 <ul>
 <li><b>Web</b> sources (HTTP/HTTPS, with username and password, GET or POST requests), <b>FTP/FTPS</b> and <b>local or network files</b>.</li>
-<li><b>Dynamic</b> URLs and file names: date, time, counter, random values, offsets (e.g. "the next hour").</li>
+<li><b>Dynamic</b> URLs and file names: date, time, counter, random values, offsets (e.g. "the next hour"), time zone and daylight saving time (e.g. <code>gmt</code>/<code>bst</code> in the name), wildcards in the file name for FTP and local files.</li>
 <li>Several <b>schedules</b> per task: weekdays and times, one-off, every N seconds/minutes/hours/days, or a cron expression.</li>
 <li><b>Actions</b> before and after the download: folder cleanup, renaming of existing files, running programs or scripts, moving, opening, notifications.</li>
 <li><b>Automatic retries</b> on error, <b>waiting for a file that is published late</b> (chapter 13.1) and alerts by <b>email</b> and <b>Telegram</b>; periodic summary report.</li>
@@ -323,6 +323,7 @@ EN = dict(manual="User manual", version="Version", license="MIT License © 2026 
 <tr><td>Linux: the AppImage does not start</td><td>Make it executable (<code>chmod +x</code>) and install FUSE (<code>libfuse2</code>) if required.</td></tr>
 <tr><td>The download does not start at the scheduled time</td><td>Check that the app is running (tray icon), that the task and schedule are enabled, and look at <i>Preview</i> and the console. Turn on the missed-schedules alert.</td></tr>
 <tr><td>401/403 error from the server</td><td>Check the username and password in the Source card.</td></tr>
+<tr><td>"No new file: the latest one that matches…"</td><td>A name with <code>*</code> found only the file taken last time: the new one has not been published yet. Nothing to fix: the wait window and the retries keep trying. "No file matches" means the folder holds nothing with that pattern: check the pattern and the folder.</td></tr>
 <tr><td>FTP: "550 file not found"</td><td>Read the message: it shows the login folder and the files present; fix the path or wait for the file to be published. Remember the double slash for absolute paths.</td></tr>
 <tr><td>The downloaded file is an error page, or the file is published late</td><td>Turn on "Waiting for the file" in the task (chapter 13.1): empty files, too small ones and web pages are tried again until the window is over. Or turn on "Check that the downloaded file isn't too small" in Settings.</td></tr>
 <tr><td>A download did not run on a holiday</td><td>Look at the <i>Calendar exceptions</i> of the task (chapter 8.6) and at the <i>skipped (exception)</i> note in the recent activity.</td></tr>
