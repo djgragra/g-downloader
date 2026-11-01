@@ -22,6 +22,8 @@ By Graziano Melzi · [OnAir Garage](https://onairgarage.com) — contact: hello@
 - **Guided updates**: when a new release is out, the app shows its release notes, downloads the right installer for your system (progress bar, *Cancel*), verifies it against `SHA256SUMS.txt` and starts it only when you ask; *Remind me later*, *Skip this version*, a safety copy of the data before installing and a *What's new* window after the update.
 - **Help & About** with *Copy support info* (never settings, addresses, passwords or file names), a logs folder (one file per day, 5 MB at most, 7 days) and a name for each installation, shown in every alert.
 
+<a href="https://ko-fi.com/F8V328ADFH"><img height="36" src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" alt="Buy Me a Coffee at ko-fi.com"></a>
+
 ## Install
 
 Download the installer for your system from the [Releases](https://github.com/djgragra/g-downloader/releases) page and verify it against `SHA256SUMS.txt`.
@@ -81,3 +83,11 @@ App gratuita per download pianificati, sempre attiva nella tray. Il **manuale** 
 ## License
 
 [MIT](LICENSE) © 2026 Graziano Melzi
+
+## Support
+
+This tool is free and will stay free, with source code. If it saved your day, you can leave a tip on Ko-fi: a thank-you, nothing more.
+
+<a href="https://ko-fi.com/F8V328ADFH"><img height="36" src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" alt="Buy Me a Coffee at ko-fi.com"></a>
+
+*Italiano:* lo strumento è gratuito e resta tale, con il codice sorgente. Se ti ha salvato la giornata puoi lasciare una mancia su Ko-fi: un grazie e basta.
